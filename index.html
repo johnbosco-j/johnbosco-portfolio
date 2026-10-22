@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>John Bosco J — Full-stack developer · Chennai</title>
+  <meta name="description" content="Portfolio of John Bosco J: pre-final year CSE student at LICET, full-stack developer and founder of Riven Devs." />
+  <meta name="theme-color" content="#2b2140" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&family=Manrope:wght@200..800&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="is-intro">
+
+  <!-- ============ INTRO: flight over a sea of clouds ============ -->
+  <div id="intro" class="intro" role="dialog" aria-label="Intro">
+    <canvas id="intro-canvas" class="intro-canvas"></canvas>
+    <div class="intro-shade"></div>
+    <div class="intro-white"></div>
+    <div class="intro-meta">
+      <span>CHENNAI, TAMIL NADU</span>
+      <i>John Bosco J</i>
+    </div>
+    <div class="intro-loader">
+      <p class="intro-status">GATHERING CLOUDS</p>
+      <div class="intro-bar"><span></span></div>
+    </div>
+    <button class="intro-skip" type="button">Skip intro
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <!-- ============ FIXED SKY ============ -->
+  <div class="scene" aria-hidden="true">
+    <div class="sky"></div>
+    <div class="horizon-glow"></div>
+    <div class="stars"></div>
+    <div class="clouds"><div class="clouds-track"><div class="clouds-drift">
+      <div class="cloud-layer cloud-day"></div>
+      <div class="cloud-layer cloud-night"></div>
+    </div></div></div>
+    <div class="sun"><span class="sun-halo"></span><span class="sun-glow"></span><span class="sun-core"></span></div>
+    <div class="moon"><span class="moon-halo"></span><span class="moon-glow"></span><span class="moon-core"></span></div>
+    <div class="grain"></div>
+  </div>
+
+  <!-- Tree frame around the CRT (sits above page content) -->
+  <div class="treeframe" aria-hidden="true"><canvas id="treeframe-canvas"></canvas></div>
+
+  <!-- ============ HEADER ============ -->
+  <header class="site-header">
+    <nav class="header-inner" aria-label="Primary">
+      <a class="brand" href="#top" aria-label="John Bosco J, back to top">
+        <svg class="brand-mark" viewBox="0 0 42 32" aria-hidden="true">
+          <defs><linearGradient id="bm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6c48a"/><stop offset="1" stop-color="#b57a52"/></linearGradient></defs>
+          <path d="M21 1.5c6.6 0 11.3 8.8 11.3 16a11.3 11.3 0 0 1-22.6 0C9.7 10.3 14.4 1.5 21 1.5Z" fill="url(#bm)"/>
+          <path d="M11 17.6l3.3-2.4 3.4 2.4 3.3-2.4 3.4 2.4 3.3-2.4 3.3 2.4" fill="none" stroke="#241b2e" stroke-width="1.4" stroke-linejoin="round"/>
+          <text x="21" y="27" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="7.5" fill="#241b2e">JB</text>
+          <path d="M2 30c6-2 12-2.6 19-2.6S34 28 40 30" fill="none" stroke="#c89566" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span>John Bosco J</span>
+      </a>
+      <div class="main-nav">
+        <a href="#about">About</a>
+        <a href="#projects">Projects</a>
+        <a href="#faq">FAQ</a>
+        <a href="#skills">Skills</a>
+      </div>
+      <a class="pill pill-cta pill-sm" href="assets/JohnBosco_J_Resume.pdf" target="_blank" rel="noopener">Résumé</a>
+    </nav>
+  </header>
+
+  <!-- Hanging badge -->
+  <div class="badge-wrap">
+    <a class="badge" href="#contact" aria-label="Open to Summer 2027 internships">
+      <span class="badge-mark">JB</span>
+      <span class="badge-open">OPEN TO</span>
+      <span class="badge-year">2027</span>
+      <span class="badge-sub">INTERNS</span>
+    </a>
+  </div>
+
+  <!-- Section dots -->
+  <nav class="dot-nav" aria-label="Sections">
+    <a href="#top"><span>TOP</span><i></i></a>
+    <a href="#about"><span>ABOUT</span><i></i></a>
+    <a href="#projects"><span>PROJECTS</span><i></i></a>
+    <a href="#experience"><span>EXPERIENCE</span><i></i></a>
+    <a href="#faq"><span>FAQ</span><i></i></a>
+    <a href="#skills"><span>SKILLS</span><i></i></a>
+    <a href="#contact"><span>CONTACT</span><i></i></a>
+  </nav>
+
+  <main>
+    <!-- ============ HERO ============ -->
+    <section id="top" class="hero">
+      <div class="hero-inner">
+        <div class="hero-row">
+          <div class="hero-meta rise">
+            <p class="eyebrow">PRE-FINAL YEAR · B.E. CSE</p>
+            <p class="hero-sub">Full-stack developer &amp; founder of Riven Devs, Chennai</p>
+          </div>
+          <div class="hero-ctas rise" style="--d:.1s">
+            <a class="pill pill-cta" href="#projects">See my work</a>
+            <a class="pill pill-ghost" href="#about">What's in the Nest?</a>
+          </div>
+        </div>
+        <div class="rise" style="--d:.2s">
+          <h1 class="hero-title" aria-label="John Bosco"><span>John</span> <span>Bosco</span></h1>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ABOUT: CRT ============ -->
+    <section id="about" class="about" aria-label="About">
+      <div class="crt" id="crt">
+        <div class="crt-content">
+          <div class="crt-text" id="crt-text"></div>
+          <pre class="crt-art" id="crt-art" aria-hidden="true"></pre>
+        </div>
+        <canvas class="crt-noise" id="crt-noise" aria-hidden="true"></canvas>
+        <div class="crt-lines" aria-hidden="true"></div>
+        <canvas class="crt-vignette" id="crt-vignette" aria-hidden="true"></canvas>
+      </div>
+      <div class="sr-only" id="crt-sr"></div>
+    </section>
+
+    <!-- ============ PROJECTS: the nest ============ -->
+    <section id="projects" class="projects">
+      <div class="trunk" id="trunk" aria-hidden="true"></div>
+      <div class="projects-inner">
+        <h2 class="h2 rise-io">What I've built</h2>
+        <p class="lede rise-io">Five projects are hatching. <a class="inline-link" href="https://github.com/johnbosco-j" target="_blank" rel="noopener">Follow along on GitHub</a> to see what's next. Tap an egg.</p>
+        <div class="nest-stage" id="nest-stage">
+          <div class="branch" id="branch" aria-hidden="true"></div>
+          <div class="nest" role="group" aria-label="A nest holding five eggs, each hiding a project">
+            <svg class="nest-back" id="nest-back" viewBox="0 0 576 300" aria-hidden="true"></svg>
+            <div class="eggs" id="eggs"></div>
+            <svg class="nest-front" id="nest-front" viewBox="0 0 576 300" aria-hidden="true"></svg>
+          </div>
+          <div class="egg-card" id="egg-card" role="dialog" aria-labelledby="egg-card-title" hidden>
+            <button class="close-btn" type="button" aria-label="Close project"><svg viewBox="0 0 16 16"><path d="M3 3l10 10M13 3 3 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+            <p class="card-label" id="egg-card-count"></p>
+            <h3 id="egg-card-title"></h3>
+            <p class="egg-card-tag" id="egg-card-tag"></p>
+            <p class="egg-card-body" id="egg-card-body"></p>
+            <ul id="egg-card-points"></ul>
+            <div class="chips" id="egg-card-stack"></div>
+            <div class="egg-card-links" id="egg-card-links"></div>
+          </div>
+          <p class="nest-hint" id="nest-hint">tap an egg</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ EXPERIENCE ============ -->
+    <section id="experience" class="tiles-section">
+      <div class="tiles-inner">
+        <h2 class="h2 caps rise-io">Experience</h2>
+        <p class="lede center rise-io">Where I've been building, with more to come.</p>
+        <ul class="tiles" id="experience-tiles"></ul>
+        <h2 class="h2 caps rise-io tiles-second">Wins</h2>
+        <p class="lede center rise-io">Hackathons, symposiums and certifications so far.</p>
+        <ul class="tiles" id="win-tiles"></ul>
+      </div>
+      <div class="flyby" aria-hidden="true"></div>
+    </section>
+
+    <!-- ============ FAQ ============ -->
+    <section id="faq" class="faq">
+      <div class="faq-inner">
+        <h2 class="h2 rise-io">FAQ</h2>
+        <div class="faq-list" id="faq-list"></div>
+      </div>
+    </section>
+
+    <!-- ============ SKILLS: the meadow ============ -->
+    <section id="skills" class="meadow">
+      <div class="meadow-head">
+        <h2 class="h2 rise-io">Skills on the trail</h2>
+        <p class="lede center rise-io">Catch an ant on the trail to see what it carries.</p>
+      </div>
+      <svg class="mountains" viewBox="0 0 1440 200" preserveAspectRatio="none" aria-hidden="true">
+        <defs><linearGradient id="mtn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b3466"/><stop offset="1" stop-color="#1f1b3c"/></linearGradient></defs>
+        <path d="M0 120 C 80 96 140 80 220 92 S 360 60 450 74 S 600 100 700 82 S 860 48 960 66 S 1120 96 1220 80 S 1380 70 1440 84 V200 H0Z" fill="url(#mtn)" opacity=".75"/>
+        <path d="M0 150 C 120 128 220 120 330 132 S 520 112 640 126 S 860 140 980 124 S 1220 116 1440 132 V200 H0Z" fill="#221d42"/>
+      </svg>
+      <canvas class="grass grass-back" id="grass-back" aria-hidden="true"></canvas>
+      <div class="ants" id="ants" role="group" aria-label="Skills"></div>
+      <canvas class="grass grass-front" id="grass-front" aria-hidden="true"></canvas>
+      <div class="meadow-scrim" id="meadow-scrim" aria-hidden="true"></div>
+      <div class="ant-card" id="ant-card" role="dialog" aria-labelledby="ant-card-title" hidden>
+        <button class="close-btn" type="button" aria-label="Close"><svg viewBox="0 0 16 16"><path d="M3 3l10 10M13 3 3 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+        <p class="card-label" id="ant-card-cat"></p>
+        <h3 id="ant-card-title"></h3>
+        <p class="ant-card-role" id="ant-card-body"></p>
+      </div>
+    </section>
+
+    <!-- ============ FOOTER: underground ============ -->
+    <footer id="contact" class="soil">
+      <svg class="soil-edge" id="soil-edge" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <svg class="soil-art" id="soil-art" aria-hidden="true"></svg>
+      <div class="soil-inner" id="soil-inner">
+        <div class="soil-cta" id="soil-cta">
+          <h2 class="h2">Ready to build something?</h2>
+          <p>Chennai, Tamil Nadu · Open to Summer 2027 internships</p>
+          <a class="pill pill-cta pill-lg" href="mailto:mailtojjohnbosco@gmail.com">Say hello</a>
+        </div>
+        <ul class="socials" id="socials">
+          <li><a href="https://github.com/johnbosco-j" target="_blank" rel="noopener" aria-label="GitHub">
+            <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.6 2.4 1.1 3 .9.1-.7.4-1.1.6-1.4-2.2-.3-4.6-1.1-4.6-5a3.9 3.9 0 0 1 1-2.7 3.6 3.6 0 0 1 .1-2.7s.8-.3 2.8 1a9.6 9.6 0 0 1 5 0c1.9-1.3 2.8-1 2.8-1 .5 1.4.2 2.4.1 2.7a3.9 3.9 0 0 1 1 2.7c0 3.9-2.3 4.7-4.6 5 .4.3.7.9.7 1.9V21c0 .3.2.6.7.5A10 10 0 0 0 12 2Z" fill="currentColor"/></svg></a></li>
+          <li><a href="https://linkedin.com/in/johnbosco-j" target="_blank" rel="noopener" aria-label="LinkedIn">
+            <svg viewBox="0 0 24 24"><path d="M6.5 8.5h-3V20h3V8.5ZM5 3.5a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5ZM20.5 13.4c0-3-1.6-5.1-4.4-5.1-1.4 0-2.4.8-2.8 1.5V8.5h-3V20h3v-6c0-1.5.6-2.8 2.2-2.8s1.9 1.4 1.9 2.9V20h3.1v-6.6Z" fill="currentColor"/></svg></a></li>
+          <li><a href="mailto:mailtojjohnbosco@gmail.com" aria-label="Email">
+            <svg viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m4 7.5 8 6 8-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></a></li>
+          <li><a href="assets/JohnBosco_J_Resume.pdf" target="_blank" rel="noopener" aria-label="Résumé (PDF)">
+            <svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v4h4M9 12h6M9 15.5h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></a></li>
+          <li><a href="https://rivendevs-site.vercel.app" target="_blank" rel="noopener" aria-label="Riven Devs">
+            <svg viewBox="0 0 24 24"><path d="M7 20V4h6a4.5 4.5 0 0 1 0 9H7m5.5 0L18 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a></li>
+          <li><a href="https://johnbosco-portfolio-gules.vercel.app" target="_blank" rel="noopener" aria-label="Previous portfolio">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></a></li>
+        </ul>
+        <div class="chamber-slot" id="chamber-slot"></div>
+      </div>
+      <div class="bedrock">
+        <div class="bedrock-inner">
+          <div>
+            <p>© 2026 John Bosco J. All Rights Reserved.</p>
+            <p>Made with care in Chennai</p>
+          </div>
+          <ul>
+            <li><a href="https://github.com/johnbosco-j" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="https://linkedin.com/in/johnbosco-j" target="_blank" rel="noopener">LinkedIn</a></li>
+            <li><a href="assets/JohnBosco_J_Resume.pdf" target="_blank" rel="noopener">Résumé</a></li>
+            <li><a href="https://johnbosco-portfolio-gules.vercel.app" target="_blank" rel="noopener">Previous portfolio</a></li>
+          </ul>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <script src="js/data.js"></script>
+  <script src="js/scene.js"></script>
+  <script src="js/intro.js"></script>
+  <script src="js/crt.js"></script>
+  <script src="js/nest.js"></script>
+  <script src="js/tiles.js"></script>
+  <script src="js/meadow.js"></script>
+  <script src="js/soil.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
