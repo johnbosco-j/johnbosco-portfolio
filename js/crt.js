@@ -133,70 +133,205 @@
   let rT;
   addEventListener("resize", () => { clearTimeout(rT); rT = setTimeout(layout, 150); });
 
-  // ---------------------------------------------------------------- ASCII monogram
-  const COLS = 60, ROWS = 26;
-  function buildArt() {
-    const cw = 6, ch = 8;
+  // ---------------------------------------------------------------- ASCII art
+  // Built from a greyscale image: the "JB" monogram by default, or the photo set in PORTFOLIO.portrait.
+  const RAMP = " .,:;i1tfLCG08@";
+  const CW = 6, CH = 8; // character cell, matching the .6em × .8em glyph box in CSS
+  function toAscii(draw, cols, rows, { contrast = false } = {}) {
     const cv = document.createElement("canvas");
-    cv.width = COLS * cw; cv.height = ROWS * ch;
-    const g = cv.getContext("2d");
+    cv.width = cols * CW; cv.height = rows * CH;
+    const g = cv.getContext("2d", { willReadFrequently: true });
     g.fillStyle = "#000"; g.fillRect(0, 0, cv.width, cv.height);
-    g.strokeStyle = "rgba(255,255,255,.3)";
-    for (let i = 0; i < 3; i++) {
-      g.lineWidth = 9 - i * 2.5;
-      g.beginPath(); g.arc(cv.width / 2, cv.height * .98, cv.height * (.6 + i * .17), Math.PI, 0); g.stroke();
-    }
-    g.fillStyle = "#fff";
-    g.font = `700 ${cv.height * 1.05}px "Space Grotesk", sans-serif`;
-    g.textAlign = "center";
-    g.fillText("JB", cv.width / 2, cv.height * .92);
-    const sh = g.createLinearGradient(0, 0, cv.width, cv.height);
-    sh.addColorStop(0, "rgba(0,0,0,0)"); sh.addColorStop(1, "rgba(0,0,0,.5)");
-    g.globalCompositeOperation = "source-atop";
-    g.fillStyle = sh; g.fillRect(0, 0, cv.width, cv.height);
-    g.fillStyle = "rgba(0,0,0,.55)";
-    for (let y = cv.height * .45; y < cv.height; y += ch * 4) g.fillRect(0, y, cv.width, ch * .85);
+    draw(g, cv.width, cv.height);
     const data = g.getImageData(0, 0, cv.width, cv.height).data;
-    const ramp = " .,:;i1tfLCG08@";
-    const rows = [];
-    for (let ry = 0; ry < ROWS; ry++) {
+    const vals = [];
+    for (let ry = 0; ry < rows; ry++) for (let rx = 0; rx < cols; rx++) {
+      let sum = 0, n = 0;
+      for (let yy = 0; yy < CH; yy += 2) for (let xx = 0; xx < CW; xx += 2) {
+        const i = ((ry * CH + yy) * cv.width + rx * CW + xx) * 4;
+        sum += data[i] * .299 + data[i + 1] * .587 + data[i + 2] * .114; n++;
+      }
+      vals.push(sum / (n * 255));
+    }
+    // Photos: stretch levels between the 4th and 99th percentile of the lit pixels.
+    let lo = 0, hi = 1;
+    if (contrast) {
+      const lit = vals.filter((v) => v > .04).sort((a, b) => a - b);
+      if (lit.length > 20) { lo = lit[Math.floor(lit.length * .04)]; hi = lit[Math.floor(lit.length * .99)]; }
+    }
+    const out = [];
+    for (let ry = 0; ry < rows; ry++) {
       let html = "";
-      for (let rx = 0; rx < COLS; rx++) {
-        let sum = 0, n = 0;
-        for (let yy = 0; yy < ch; yy += 2) for (let xx = 0; xx < cw; xx += 2) { sum += data[((ry * ch + yy) * cv.width + rx * cw + xx) * 4]; n++; }
-        const v = sum / (n * 255);
-        const chr = ramp[Math.min(ramp.length - 1, Math.floor(v * ramp.length))];
+      for (let rx = 0; rx < cols; rx++) {
+        let v = vals[ry * cols + rx];
+        if (contrast) v = v < .04 ? 0 : Math.pow(clamp((v - lo) / (hi - lo || 1)), .9);
+        const chr = RAMP[Math.min(RAMP.length - 1, Math.floor(v * RAMP.length))];
         html += v < .42 && chr !== " " ? `<span class="d">${chr}</span>` : chr;
       }
-      rows.push(`<span class="r">${html}</span>`);
+      out.push(`<span class="r">${html}</span>`);
     }
-    artEl.innerHTML = rows.join("");
+    artEl.style.setProperty("--cols", cols);
+    artEl.style.setProperty("--rows", rows);
+    artEl.innerHTML = out.join("");
+    artRows = [...artEl.querySelectorAll(".r")];
+    shownRows = -1;
   }
-  (document.fonts ? document.fonts.load('700 100px "Space Grotesk"') : Promise.resolve()).then(buildArt, buildArt);
+  function monogram() {
+    toAscii((g, w, h) => {
+      g.strokeStyle = "rgba(255,255,255,.3)";
+      for (let i = 0; i < 3; i++) {
+        g.lineWidth = 9 - i * 2.5;
+        g.beginPath(); g.arc(w / 2, h * .98, h * (.6 + i * .17), Math.PI, 0); g.stroke();
+      }
+      g.fillStyle = "#fff";
+      g.font = `700 ${h * 1.05}px "Space Grotesk", sans-serif`;
+      g.textAlign = "center";
+      g.fillText("JB", w / 2, h * .92);
+      const sh = g.createLinearGradient(0, 0, w, h);
+      sh.addColorStop(0, "rgba(0,0,0,0)"); sh.addColorStop(1, "rgba(0,0,0,.5)");
+      g.globalCompositeOperation = "source-atop";
+      g.fillStyle = sh; g.fillRect(0, 0, w, h);
+      g.fillStyle = "rgba(0,0,0,.55)";
+      for (let y = h * .45; y < h; y += CH * 4) g.fillRect(0, y, w, CH * .85);
+    }, 60, 26);
+  }
+  // Portrait: cut the subject off a plain light backdrop, crop to head and shoulders,
+  // then boost local contrast so features survive at character resolution.
+  function preparePortrait(img) {
+    const W = 360, H = Math.round(W * img.height / img.width);
+    const c = document.createElement("canvas");
+    c.width = W; c.height = H;
+    const g = c.getContext("2d", { willReadFrequently: true });
+    g.drawImage(img, 0, 0, W, H);
+    const px = g.getImageData(0, 0, W, H).data;
+    const lum = new Float32Array(W * H), bgLike = new Uint8Array(W * H);
+    for (let i = 0; i < W * H; i++) {
+      const r = px[i * 4], gg = px[i * 4 + 1], b = px[i * 4 + 2];
+      const mx = Math.max(r, gg, b), mn = Math.min(r, gg, b);
+      lum[i] = (r * .299 + gg * .587 + b * .114) / 255;
+      bgLike[i] = mx > 170 && mx - mn < 34 ? 1 : 0; // light and unsaturated
+    }
+    // Flood-fill the backdrop inwards from the border.
+    const bg = new Uint8Array(W * H), stack = [];
+    const push = (i) => { if (!bg[i] && bgLike[i]) { bg[i] = 1; stack.push(i); } };
+    for (let x = 0; x < W; x++) { push(x); push((H - 1) * W + x); }
+    for (let y = 0; y < H; y++) { push(y * W); push(y * W + W - 1); }
+    while (stack.length) {
+      const i = stack.pop(), x = i % W, y = (i / W) | 0;
+      if (x > 0) push(i - 1); if (x < W - 1) push(i + 1);
+      if (y > 0) push(i - W); if (y < H - 1) push(i + W);
+    }
+    // Find the head: the top of the figure, and its left/right edges over the first stretch of rows.
+    let top = H;
+    for (let y = 0; y < H && top === H; y++) { let n = 0; for (let x = 0; x < W; x++) n += bg[y * W + x] ? 0 : 1; if (n > W * .02) top = y; }
+    if (top === H) top = 0;
+    const lefts = [], rights = [];
+    for (let y = top + 4; y < Math.min(H, top + W * .2); y++) {
+      let l = -1, r = -1;
+      for (let x = 0; x < W; x++) if (!bg[y * W + x]) { if (l < 0) l = x; r = x; }
+      if (l >= 0) { lefts.push(l); rights.push(r); }
+    }
+    const med = (a) => a.sort((p, q) => p - q)[a.length >> 1];
+    const headL = lefts.length ? med(lefts) : W * .3, headR = rights.length ? med(rights) : W * .7;
+    const headCx = (headL + headR) / 2, headW = Math.max(W * .2, headR - headL);
+    // Bust crop centred on the head; areas outside the photo count as backdrop.
+    const cw = Math.round(headW * 2.15), ch = Math.round(cw * 1.08);
+    const x0 = Math.round(headCx - cw / 2), y0 = Math.round(top - headW * .12);
+    const at = (x, y) => (x >= 0 && x < W && y >= 0 && y < H ? y * W + x : -1);
+    // Subject tones: stretch between percentiles of the figure inside the crop.
+    const vals = [];
+    for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) { const i = at(x + x0, y + y0); if (i >= 0 && !bg[i]) vals.push(lum[i]); }
+    vals.sort((a, b) => a - b);
+    const lo = vals[Math.floor(vals.length * .03)] || 0, hi = vals[Math.floor(vals.length * .995)] || 1;
+    const R = 3;
+    const blurAt = (x, y) => {
+      let s = 0, n = 0;
+      for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx += 2) {
+        const i = at(Math.min(W - 1, Math.max(0, x + dx)), Math.min(H - 1, Math.max(0, y + dy)));
+        if (i >= 0) { s += lum[i]; n++; }
+      }
+      return n ? s / n : 0;
+    };
+    const out = g.createImageData(cw, ch);
+    for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
+      const sx = x + x0, sy = y + y0, i = at(sx, sy), o = (y * cw + x) * 4;
+      let v = 0;
+      if (i >= 0 && !bg[i]) {
+        v = clamp((lum[i] - lo) / (hi - lo || 1));
+        // Sharpen only the lit areas (the face) so dark curls don't turn into noise.
+        const lit = Scene.smooth(.2, .45, v);
+        v = clamp(v + (lum[i] - blurAt(sx, sy)) * 1.8 * lit);
+        // Darks settle into a calm silhouette; mid-tones and highlights carry the features.
+        v = .14 + .86 * Scene.smooth(.05, .92, v);
+        // Oval fade so the shoulders dissolve instead of being cut by the frame.
+        const dx = (x - cw / 2) / (cw * .5), dy = (y - ch * .4) / (ch * .62);
+        v *= 1 - Scene.smooth(.78, 1, Math.hypot(dx, dy));
+      }
+      out.data[o] = out.data[o + 1] = out.data[o + 2] = Math.round(v * 255);
+      out.data[o + 3] = 255;
+    }
+    const res = document.createElement("canvas");
+    res.width = cw; res.height = ch;
+    res.getContext("2d").putImageData(out, 0, 0);
+    return res;
+  }
+  function portrait(src) {
+    const img = new Image();
+    img.onload = () => {
+      const prepared = preparePortrait(img);
+      const cols = 64, rows = Math.max(24, Math.min(50, Math.round(cols * (prepared.height / prepared.width) * (CW / CH))));
+      toAscii((g, w, h) => g.drawImage(prepared, 0, 0, w, h), cols, rows);
+    };
+    img.onerror = monogram;
+    img.src = src;
+  }
+  let artRows = [], shownRows = -1;
+  (document.fonts ? document.fonts.load('700 100px "Space Grotesk"') : Promise.resolve()).then(
+    () => (PORTFOLIO.portrait ? portrait(PORTFOLIO.portrait) : monogram()),
+    monogram
+  );
 
-  // ---------------------------------------------------------------- Typing
+  // ---------------------------------------------------------------- Terminal, revealed by scrolling
   const lines = PORTFOLIO.terminal;
   srEl.textContent = lines.map((l) => l.map((s) => s[0]).join("")).join("\n");
   const cursor = document.createElement("span");
   cursor.className = "crt-cursor";
-  let typed = false;
-  const wait = (ms) => new Promise((res) => setTimeout(res, ms));
-  async function type() {
-    typed = true;
-    const rows = [...artEl.querySelectorAll(".r")];
-    rows.forEach((row, i) => setTimeout(() => row.classList.add("on"), reduceMotion ? 0 : 150 + i * 55));
-    for (const line of lines) {
-      const p = document.createElement("p");
-      textEl.appendChild(p);
-      p.appendChild(cursor);
-      for (const [text, tone] of line) {
-        const span = document.createElement("span");
-        span.className = "t-" + tone;
-        p.insertBefore(span, cursor);
-        if (reduceMotion) { span.textContent = text; continue; }
-        for (const chr of text) { span.textContent += chr; await wait(chr === " " ? 10 : 24); }
+  // Every segment is a span whose text is sliced to however far the reader has scrolled.
+  // Blank lines count as a few "characters" so the reveal pauses between blocks.
+  const segs = [];
+  let total = 0;
+  for (const line of lines) {
+    const p = document.createElement("p");
+    textEl.appendChild(p);
+    if (!line.length) { segs.push({ p, span: null, text: "", start: total }); total += 6; continue; }
+    for (const [text, tone] of line) {
+      const span = document.createElement("span");
+      span.className = "t-" + tone;
+      p.appendChild(span);
+      segs.push({ p, span, text, start: total });
+      total += text.length;
+    }
+  }
+  let shownChars = -1, revealed = 0;
+  function reveal(k) {
+    const n = Math.round(clamp(k) * total);
+    if (n !== shownChars) {
+      shownChars = n;
+      let last = segs[0];
+      for (const sg of segs) {
+        if (!sg.span) { if (n >= sg.start) last = sg; continue; }
+        const c = Math.max(0, Math.min(sg.text.length, n - sg.start));
+        if (sg.span.textContent.length !== c) sg.span.textContent = sg.text.slice(0, c);
+        if (n >= sg.start) last = sg;
       }
-      if (!reduceMotion) await wait(line.length && line[0][0].startsWith(">") ? 320 : 80);
+      // Cursor sits after the last revealed character.
+      if (last.span) last.span.after(cursor); else last.p.appendChild(cursor);
+    }
+    // The art prints top to bottom a little ahead of the text.
+    const rowsOn = Math.round(clamp(k * 1.15) * artRows.length);
+    if (rowsOn !== shownRows) {
+      shownRows = rowsOn;
+      artRows.forEach((r, i) => r.classList.toggle("on", i < rowsOn));
     }
   }
 
@@ -215,8 +350,9 @@
   Scene.onFrame(({ y, vh }) => {
     const top = about.offsetTop, h = about.offsetHeight;
     const fade = linear(top - .666 * vh, top - .24 * vh, y);
-    const exitStart = top + .3 * vh, exitEnd = top + h;
-    const lift = -1.4 * vh * linear(exitStart, exitEnd, y) * ((exitEnd - exitStart) / vh);
+    // The last screen of the section lifts the CRT away at 1.4× scroll speed.
+    const exitStart = top + h - vh, exitEnd = top + h;
+    const lift = -1.4 * vh * linear(exitStart, exitEnd, y);
     const visible = fade > 0 && y < exitEnd + .3 * vh;
     const vis = visible ? "visible" : "hidden";
     crt.style.visibility = vis;
@@ -225,7 +361,10 @@
     const op = fade.toFixed(3), tf = `translate3d(0, ${lift.toFixed(1)}px, 0)`;
     crt.style.opacity = op; crt.style.transform = tf;
     frame.style.opacity = op; frame.style.transform = tf;
-    if (!typed && fade > .6) type();
+    // Lines appear as you scroll down through the hold, finishing just before the lift.
+    // Progress only ever moves forward: scrolling back up keeps what has been revealed.
+    revealed = Math.max(revealed, reduceMotion ? 1 : linear(top - .2 * vh, exitStart - .15 * vh, y));
+    reveal(revealed);
     if (!reduceMotion && (nFrame++ & 1) === 0) drawNoise();
   });
 })();

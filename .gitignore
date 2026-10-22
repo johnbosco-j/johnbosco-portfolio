@@ -3,3 +3,5 @@
 .claude/
 REFERENCE_NOTES.md
 node_modules/
+# Original photo; the site uses the smaller assets/portrait-ascii.jpg
+assets/portrait.jpg

@@ -4,6 +4,9 @@ window.PORTFOLIO = {
   email: "mailtojjohnbosco@gmail.com",
   // Pre-rendered intro flight (e.g. from Google Flow). Leave null to use the live WebGL clouds.
   introVideo: null,
+  // Photo turned into ASCII art on the CRT. Use a head-and-shoulders shot on a plain black background.
+  // Leave null to show the "JB" monogram.
+  portrait: "assets/portrait-ascii.jpg",
   links: {
     github: "https://github.com/johnbosco-j",
     linkedin: "https://linkedin.com/in/johnbosco-j",
@@ -15,7 +18,7 @@ window.PORTFOLIO = {
   // CRT terminal, typed line by line. Each line is a list of [text, tone].
   // tones: text | dim | accent | highlight
   terminal: [
-    [["JOHN BOSCO J  ", "text"], ["v2026", "text"]],
+    [["JOHN BOSCO J", "text"]],
     [["LICET · Chennai, India", "dim"]],
     [],
     [["> whoami?", "dim"]],
