@@ -44,7 +44,7 @@ export const audio = {
       const el = M.el; if (!el) return;
       const left = (el.duration || 1e9) - el.currentTime, edge = Math.min(1, el.currentTime / 3, left / 3.5);
       const want = (this.on && !M.paused && !M.leaving ? M.vol : 0) * Math.max(0, edge) * M.duck;
-      el.volume = Math.max(0, Math.min(1, el.volume + Math.sign(want - el.volume) * Math.min(Math.abs(want - el.volume), 0.012)));
+      el.volume = Math.max(0, Math.min(1, el.volume + Math.sign(want - el.volume) * Math.min(Math.abs(want - el.volume), Math.max(0.001, M.vol * 0.035))));
       if (M.paused && el.volume < 0.004 && !el.paused) el.pause();
       if (M.leaving && el.volume < 0.004) { M.leaving = false; this.playAt(M.nextAt); }
     }, 50);
