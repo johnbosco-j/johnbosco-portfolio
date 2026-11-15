@@ -231,9 +231,12 @@ export function createHouse({ scene, showCard, guide, say, tween, models, drop, 
     car.start = () => { if (car.driving) return; car.lights(true); car.driving = true; audio.engine(); };
     car.stop = () => { if (!car.driving) return; car.driving = false; audio.click(); };
     // where the guide rides, and where the ride-along camera sits (just behind and above)
-    car.seat = (who, out = new THREE.Vector3()) => car.rig.localToWorld(out.copy(who === 'driver' ? V(0, sz.y - 0.02, -0.15) : V(0, sz.y + 1.75, -4.6)));
+    // seats, in the car's own (unscaled) space. Right-hand drive: the driver is on the right.
+    const SEATS = { driver: V(0, sz.y - 0.02, -0.15), driverIn: V(-0.34, 0.5, 0.42), inside: V(0.33, 1.1, 0.22), passenger: V(0, sz.y + 1.75, -4.6) };
+    car.seat = (who, out = new THREE.Vector3()) => car.rig.localToWorld(out.copy(SEATS[who] || SEATS.passenger));
+    car.horn = () => audio.horn();
     const d = offClock.find(o => o.title === 'Driving');
-    add(c, 'The Ertiga: use the key fob', () => { car.lights(!car.on); if (car.on) audio.horn(); showCard({ eyebrow: 'Off the clock', title: d.title, sub: 'A pint-sized Suzuki Ertiga', body: d.body + ' Use the key fob at the bottom right: your guide drives, and you can ride along or wave them down whenever you like.' }); });
+    add(c, 'The Ertiga: press Drive on the key fob', () => { car.lights(!car.on); if (car.on) audio.horn(); showCard({ eyebrow: 'Off the clock', title: d.title, sub: 'A pint-sized Suzuki Ertiga', body: d.body + ' Press Drive on the key fob: you both climb in, your guide takes the wheel, and you can stop or get out whenever you like.' }); });
     let hum = 0;
     // `blockedBy(pos)` lets main.js say when the visitor is standing in the way
     car.update = (dt, t, inWay) => {
@@ -347,7 +350,7 @@ export function createHouse({ scene, showCard, guide, say, tween, models, drop, 
     kitchen: { name: 'Fridge door', at: V(0.4, 0.15, -5.3), r: 1.1, stand: [V(0.42, 0.15, -4.82), 0], guide: V(-0.3, drop(-0.3, -5.78, 1.5) ?? 0.95, -5.78), gesture: 'pointR', hint: 'Click a note, a magnet or the checklist', line: ['kitchen', 'Everything on this fridge does something. Notes reach him, the checklist ticks, and Sous will plan your dinner.'] },
     studio: { name: 'Studio desk', at: V(0.62, 3.0, -3.6), r: 1.0, stand: [V(1.28, 3.0, -3.62), Math.PI / 2], guide: V(0.5, deskY, -4.02), gesture: 'pointL', hint: 'Click the laptop or the trainer kit', line: ['studio', 'Up here is where the work happens. Sit at the laptop and browse his live sites, or run the 8086 trainer kit.'] },
     keys: { name: 'Keyboard', at: V(0.62, 3.0, -4.6), r: 0.75, stand: [V(1.3, 3.0, -4.56), Math.PI / 2], guide: V(0.42, deskY + 0.13, -4.0), gesture: 'cheer', hint: 'Press E to sit down and play', line: ['keys', 'He plays keyboard for Sunday Mass. Press E to sit down. All sixty-one keys work, and your own keyboard plays it too.'] },
-    patio: { name: 'Patio', at: V(-4.1, 0.1, -1.6), r: 2.6, stand: [V(-4.15, 0.1, 0.3), 0], guide: V(-3.35, 0.1, -0.6), gesture: 'pointL', hint: 'Use the key fob, bottom right', line: ['patio', 'And out back, his other love: driving. The key fob is yours. Say the word and I\'ll take her for a lap.'] },
+    patio: { name: 'Patio', at: V(-4.1, 0.1, -1.6), r: 2.6, stand: [V(-4.15, 0.1, 0.3), 0], guide: V(-3.35, 0.1, -0.6), gesture: 'pointL', hint: 'Press E or the key fob to go for a drive', line: ['patio', 'And out back, his other love: driving. Press Drive and we\'ll both climb in. I\'ll take the wheel.'] },
   };
   return { stations, clickables, piano, hen, car, laptop, update: (dt, t) => updaters.forEach(u => u(dt, t)) };
 }

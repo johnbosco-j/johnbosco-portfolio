@@ -32,7 +32,9 @@ const SEAT = { eye: V(-0.15, 1.12, -1.95), stand: V(1.25, 0.15, -1.35) };
 // ---------- renderer ----------
 const canvas = $('stage');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const TOUCH = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 1 || /[?&]touch=1/.test(location.search);
+if (TOUCH) document.body.classList.add('touch');
+renderer.setPixelRatio(Math.min(devicePixelRatio, TOUCH ? 1.5 : 2));
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.8;
 const scene = new THREE.Scene();
@@ -52,7 +54,7 @@ scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 const hemi = new THREE.HemisphereLight(0x8fa0c8, 0x3a2e26, 0.3); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xff9e66, 1.1);
 sun.target.position.set(0, 0.6, -2.2); scene.add(sun, sun.target);
-sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
+sun.castShadow = true; sun.shadow.mapSize.set(TOUCH ? 1024 : 2048, TOUCH ? 1024 : 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
 Object.assign(sun.shadow.camera, { left: -8, right: 8, top: 8, bottom: -6, near: 1, far: 30 });
 const lamps = [], stripMats = [];
 const lamp = (x, y, z, i, c = 0xffd6a0, d = 9) => { const l = new THREE.PointLight(c, i, d, 1.8); l.position.set(x, y, z); l.userData.base = i; scene.add(l); lamps.push(l); return l; };
@@ -100,7 +102,7 @@ function tween(dur, fn, e = ease) { return new Promise(res => tweens.push({ t: 0
 const state = { phase: 'boot', t: 0, hover: null, hasRemote: false, remoteIn: 'table', raise: 0, keyAt: -9, station: null, toured: false, freeT: 0, tireAt: 60 + Math.random() * 60, handed: false, busy: false, rpsAt: 140 + Math.random() * 60, henAt: 35 + Math.random() * 40 };
 // the visitor: `pos` is the feet, `view` is what the camera uses when a scripted move owns it
 const player = { pos: V(1.45, 0.15, -7.2), yaw: Math.PI, pitch: -0.3, mode: 'cine', stride: 0, bob: 0, vel: 0, view: null, fov: 58 };
-const keys = new Set(), ptr = { x: 0, y: 0, sx: 0, sy: 0 };
+const keys = new Set(), ptr = { x: 0, y: 0, sx: 0, sy: 0 }, stick = { x: 0, y: 0 };
 const tv = new TV();
 const sheriff = new Guide('sheriff'), ranger = new Guide('ranger');
 let active = sheriff; const guide = () => active;
@@ -220,6 +222,8 @@ const dlg = { el: $('dialog'), text: $('dialogText'), full: '', shown: 0, resolv
 function say(line, { auto = false, hold = 4.2, id = null, who = active } = {}) {
   dlg.token++; const my = dlg.token;
   if (dlg.resolve) { const r = dlg.resolve; dlg.resolve = null; r(); }
+  // on a phone there is no keyboard to talk about
+  if (TOUCH) line = line.replace(/:? ?W, A, S, D/g, ' with the stick').replace('Press E to sit down', 'Tap Play to sit down').replace(/Press E to sit, then/, 'Tap Sit, then').replace('Press E to sit', 'Tap Sit').replace(/Keys A through K, and the/, 'The');
   audio.stopVoice();
   dlg.full = line; dlg.shown = 0; dlg.auto = auto; dlg.cps = 34; dlg.text.textContent = ''; dlg.who = who;
   $('plateName').textContent = guideNames[who.style].name;
@@ -305,9 +309,10 @@ function freeWalk(dt) {
   let f = 0, s = 0;
   if (keys.has('w') || keys.has('arrowup')) f += 1; if (keys.has('s') || keys.has('arrowdown')) f -= 1;
   if (keys.has('d')) s += 1; if (keys.has('a')) s -= 1;
+  f -= stick.y; s += stick.x;
   if (keys.has('arrowleft')) player.yaw += dt * 1.9; if (keys.has('arrowright')) player.yaw -= dt * 1.9;
-  if (!f && !s) { player.vel *= Math.pow(0.001, dt); return; }
-  const speed = keys.has('shift') ? 2.5 : 1.45, sin = Math.sin(player.yaw), cos = Math.cos(player.yaw), n = Math.hypot(f, s);
+  if (Math.abs(f) < 0.08 && Math.abs(s) < 0.08) { player.vel *= Math.pow(0.001, dt); return; }
+  const speed = keys.has('shift') || Math.hypot(stick.x, stick.y) > 0.92 ? 2.3 : 1.45, sin = Math.sin(player.yaw), cos = Math.cos(player.yaw), n = Math.max(1, Math.hypot(f, s));
   let dx = (-sin * f + cos * s) / n * speed * dt, dz = (-cos * f - sin * s) / n * speed * dt;
   const H = [0.55, 1.1, 1.55], R = 0.3;
   const tryMove = (mx, mz) => {
@@ -481,8 +486,10 @@ let followAcc = 0;
 function updateGuides(dt) {
   followAcc += dt;
   const inCar = house && (house.car.driving || player.mode === 'car') && !active.asleep;
-  if (inCar && !active.hop) { if (active.root.position.distanceTo(house.car.seat('driver')) > 0.5 && !state.guideBoarded) { state.guideBoarded = true; active.hopTo(house.car.seat('driver'), { height: 0.7, duration: 0.7 }).then(() => { state.guideSeated = true; }); } else if (state.guideSeated) { house.car.seat('driver', active.root.position); active.targetYaw = house.car.heading; } }
+  if (inCar && !active.hop) { if (active.root.position.distanceTo(house.car.seat('driver')) > 0.5 && !state.guideBoarded) { state.guideBoarded = true; active.hopTo(house.car.seat('driver'), { height: 0.7, duration: 0.7 }).then(() => { state.guideSeated = true; }); } else if (state.guideSeated) { house.car.seat(player.mode === 'car' && state.carView === 'in' ? 'driverIn' : 'driver', active.root.position); active.targetYaw = house.car.heading; } }
   if (!inCar) state.guideBoarded = state.guideSeated = false;
+  // inside the car the guide is sized to the cabin; everywhere else, normal size
+  { const gs = inCar && state.guideSeated && player.mode === 'car' && state.carView === 'in' ? 0.2 : 0.46, s = active.root.scale.x; active.root.scale.setScalar(s + (gs - s) * Math.min(1, dt * 7)); }
   if (followAcc > 0.3 && state.phase === 'free' && !active.hop && !active.asleep && !inCar) {
     followAcc = 0; const tgt = guideTarget(active), d = active.root.position.distanceTo(tgt);
     if (d > 0.75) { active.hopTo(tgt, { height: clamp(d * 0.22, 0.16, 1.4), duration: clamp(d * 0.2, 0.34, 1.1) }); if (d < 6) audio.hop(); }
@@ -500,7 +507,7 @@ function updateStation() {
   state.station = best; fob.hidden = best !== 'patio'; if (best === 'patio') drawFob();
   document.querySelectorAll('#dock [data-station]').forEach(b => b.classList.toggle('on', b.dataset.station === best));
   if (!best) { objective(''); return; }
-  const st = house.stations[best]; objective(st.hint, true);
+  const st = house.stations[best]; objective(TOUCH ? (USE_LABEL[best] ? '' : st.hint.replace('Click', 'Tap')) : st.hint, true);
   if (!visited.has(best)) { visited.add(best); if (st.gesture) setTimeout(() => active.play(st.gesture, 2.4), 500); say(st.line[1], { auto: true, hold: 4, id: 'at-' + st.line[0] }); }
 }
 const visited = new Set();
@@ -559,7 +566,7 @@ function closeLaptop() {
   state.busy = true; objective('');
   tween(0.8, k => { player.lap.pos.lerpVectors(from, to, k); player.lap.quat.slerpQuaternions(q0, q1, k); }).then(() => { player.mode = 'walk'; player.lap = null; state.busy = false; state.station = null; $('help').textContent = HELP_WALK; });
 }
-const HELP_WALK = 'W A S D: walk · drag: look · Shift: brisk · E: use';
+const HELP_WALK = TOUCH ? 'Stick: walk · drag: look' : 'W A S D: walk · drag: look · Shift: brisk · E: use';
 // sit at the keyboard: the camera looks down the keys and the computer keyboard plays them
 function openPiano() {
   if (player.mode !== 'walk' || state.busy) return;
@@ -583,24 +590,40 @@ function pianoKey(k) {
 const fob = document.createElement('div'); fob.id = 'fob'; fob.hidden = true; document.body.appendChild(fob);
 function drawFob() {
   const c = house.car, riding = player.mode === 'car';
-  fob.innerHTML = `<b>Ertiga</b><span>${riding ? (c.driving ? 'Riding along. Your guide has the wheel.' : 'Riding along. Parked.') : c.driving ? 'Out doing laps.' : 'Parked on the patio.'}</span>
-    <div><button data-a="lights">${c.on ? 'Lights off' : 'Lights on'}</button><button data-a="door" class="main">${riding ? 'Hop off' : 'Ride along'}</button><button data-a="drive">${c.driving ? 'Stop' : 'Drive'}</button></div>`;
-  fob.querySelectorAll('button').forEach(b => b.onclick = () => { const a = b.dataset.a; if (a === 'lights') c.lights(!c.on); if (a === 'door') riding ? exitCar() : enterCar(); if (a === 'drive') { if (c.driving) c.stop(); else { c.start(); active.play('cheer', 1.2); if (!state.droveOnce) { state.droveOnce = true; say('Yee-haw! Stand clear, partner. I drive this thing with style.', { auto: true, hold: 3, id: 'car-go' }); } } } drawFob(); });
+  fob.innerHTML = `<b>Ertiga <i id="fobSpeed"></i></b><span>${riding ? (c.driving ? 'On the road. Your guide has the wheel.' : 'Parked. You are both inside.') : 'Parked on the patio.'}</span>
+    <div>${riding
+      ? `<button data-a="door" class="main">Get out</button><button data-a="drive">${c.driving ? 'Stop' : 'Go'}</button><button data-a="view">${state.carView === 'in' ? 'Outside view' : 'Inside view'}</button><button data-a="lights">${c.on ? 'Lights off' : 'Lights on'}</button><button data-a="horn">Horn</button>`
+      : `<button data-a="go" class="main">Drive</button><button data-a="lights">${c.on ? 'Lights off' : 'Lights on'}</button><button data-a="horn">Horn</button>`}</div>`;
+  fob.querySelectorAll('button').forEach(b => b.onclick = () => {
+    const a = b.dataset.a;
+    if (a === 'lights') c.lights(!c.on); if (a === 'horn') c.horn(); if (a === 'door') exitCar(); if (a === 'go') driveCar();
+    if (a === 'drive') { if (c.driving) c.stop(); else c.start(); }
+    if (a === 'view') { state.carView = state.carView === 'in' ? 'out' : 'in'; audio.click(); player.yaw = state.carView === 'in' ? -0.35 : 0; }
+    drawFob();
+  });
+}
+// Drive: both of you get in, the engine starts, and off you go
+async function driveCar() {
+  if (player.mode !== 'walk' || state.busy) return;
+  await enterCar(); if (player.mode !== 'car') return;
+  active.play('cheer', 1.2); house.car.start(); drawFob();
+  if (!state.droveOnce) { state.droveOnce = true; say('Buckle up, partner. Short road, but I drive it with style.', { auto: true, hold: 3, id: 'car-go' }); }
 }
 async function enterCar() {
   if (player.mode !== 'walk' || state.busy) return;
   state.busy = true; hideCard(); objective(''); audio.click();
-  const a = eyeOf(), y0 = player.yaw, p0 = player.pitch; let dy = house.car.heading + Math.PI - y0; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+  state.carView = 'in'; const a = eyeOf(), y0 = player.yaw, p0 = player.pitch; let dy = house.car.heading + Math.PI - 0.35 - y0; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
   player.mode = 'cine'; player.view = { pos: a.clone(), yaw: y0, pitch: p0 };
-  await tween(1.0, k => { player.view.pos.lerpVectors(a, house.car.seat('passenger'), k); player.view.yaw = y0 + dy * k; player.view.pitch = p0 + (-0.3 - p0) * k; });
+  // walk to the door, duck in
+  await tween(1.3, k => { player.view.pos.lerpVectors(a, house.car.seat('inside'), k); player.view.pos.y += Math.sin(k * Math.PI) * 0.05; player.view.yaw = y0 + dy * k; player.view.pitch = p0 + (-0.04 - p0) * k - Math.sin(k * Math.PI) * 0.18; });
   if (audio.ok()) audio.burst({ dur: 0.12, type: 'lowpass', freq: 300, vol: 0.3 });
-  player.mode = 'car'; player.view = null; player.yaw = 0; player.pitch = 0; state.busy = false; drawFob();
-  $('help').textContent = 'Drag to look around · use the key fob to drive, stop or hop off';
+  player.mode = 'car'; player.view = null; player.yaw = -0.35; player.pitch = 0; state.busy = false; drawFob();
+  $('help').textContent = 'Drag to look around · the key fob stops, changes view or lets you out';
 }
 async function exitCar() {
   if (player.mode !== 'car' || state.busy) return;
   state.busy = true; house.car.stop(); if (audio.ok()) audio.burst({ dur: 0.12, type: 'lowpass', freq: 300, vol: 0.3 });
-  const st = house.stations.patio.stand[0], a = house.car.seat('passenger'), b = V(st.x, st.y + EYE, st.z), y0 = house.car.heading + Math.PI + player.yaw; let dy = 0 - y0; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+  const st = house.stations.patio.stand[0], a = house.car.seat(state.carView === 'in' ? 'inside' : 'passenger'), b = V(st.x, st.y + EYE, st.z), y0 = house.car.heading + Math.PI + player.yaw; let dy = 0 - y0; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
   player.mode = 'cine'; player.view = { pos: a.clone(), yaw: y0, pitch: -0.3 };
   await tween(1.1, k => { player.view.pos.lerpVectors(a, b, k); player.view.yaw = y0 + dy * k; player.view.pitch = -0.3 * (1 - k); });
   player.pos.copy(st); player.yaw = 0; player.pitch = 0; player.view = null; player.mode = 'walk'; state.busy = false; drawFob(); $('help').textContent = HELP_WALK;
@@ -720,6 +743,12 @@ canvas.addEventListener('pointerup', e => {
 });
 $('dialog').addEventListener('click', advance);
 // the space bar pauses the music when the Music app is open
+// what E (or the Use button) does where you are standing
+function useAction() {
+  if (player.mode !== 'walk' || state.phase !== 'free') return;
+  if (state.station === 'sofa') sitDown(); else if (state.station === 'studio') openLaptop(house.laptop); else if (state.station === 'keys') openPiano(); else if (state.station === 'patio') driveCar();
+}
+const USE_LABEL = { sofa: 'Sit', studio: 'Laptop', keys: 'Play', patio: 'Drive' };
 const TVKEYS = { arrowleft: ['ring', 'left'], arrowright: ['ring', 'right'], arrowup: ['ring', 'up'], arrowdown: ['ring', 'down'], enter: ['ok', 'ok'], ' ': ['ok', 'ok'], escape: ['back', 'back'], backspace: ['back', 'back'], h: ['home', 'home'], p: ['power', 'power'], m: ['mute', 'mute'] };
 addEventListener('keydown', e => {
   if (state.phase === 'boot' || !$('plain').hidden || e.metaKey || e.ctrlKey) return;
@@ -736,11 +765,31 @@ addEventListener('keydown', e => {
     return;
   }
   if (player.mode !== 'walk' || state.phase !== 'free') return;
-  if (k === 'e') { if (state.station === 'sofa') sitDown(); else if (state.station === 'studio') openLaptop(house.laptop); else if (state.station === 'keys') openPiano(); else if (state.station === 'patio') enterCar(); return; }
+  if (k === 'e') { useAction(); return; }
   if (['w', 'a', 's', 'd', 'shift', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) { keys.add(k); e.preventDefault(); }
 });
 addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
 addEventListener('blur', () => keys.clear());
+// ---------- touch controls ----------
+{
+  const pad = $('stick'), knob = pad.firstElementChild; let id = null, cx = 0, cy = 0;
+  const set = e => { const r = 46, dx = clamp((e.clientX - cx) / r, -1, 1), dy = clamp((e.clientY - cy) / r, -1, 1), m = Math.max(1, Math.hypot(dx, dy)); stick.x = dx / m; stick.y = dy / m; knob.style.transform = `translate(${stick.x * r}px, ${stick.y * r}px)`; };
+  pad.addEventListener('pointerdown', e => { audio.init(); id = e.pointerId; const b = pad.getBoundingClientRect(); cx = b.left + b.width / 2; cy = b.top + b.height / 2; pad.setPointerCapture(id); set(e); if (player.mode === 'sit' && state.phase === 'free') standUp(); });
+  pad.addEventListener('pointermove', e => { if (e.pointerId === id) set(e); });
+  const end = e => { if (e.pointerId !== id) return; id = null; stick.x = stick.y = 0; knob.style.transform = ''; };
+  pad.addEventListener('pointerup', end); pad.addEventListener('pointercancel', end);
+  $('btnUse').onclick = () => { audio.init(); useAction(); };
+  $('btnBack').onclick = () => { if (player.mode === 'sit') standUp(); else if (player.lap) closeLaptop(); else if (player.mode === 'car') exitCar(); };
+}
+let touchAcc = 0;
+function updateTouchUI(dt) {
+  touchAcc += dt; if (touchAcc < 0.2) return; touchAcc = 0;
+  const free = state.phase === 'free' && !state.busy, walk = free && player.mode === 'walk', use = walk && USE_LABEL[state.station];
+  $('stick').hidden = !(walk || (free && player.mode === 'sit')); $('btnUse').hidden = !use; if (use) $('btnUse').textContent = use;
+  const back = free && (player.mode === 'sit' || player.mode === 'piano' || player.mode === 'car'); $('btnBack').hidden = !back;
+  if (back) $('btnBack').textContent = player.mode === 'sit' ? 'Stand up' : player.mode === 'car' ? 'Get out' : 'Done';
+  const sp = document.getElementById('fobSpeed'); if (sp && house) sp.textContent = house.car.v > 0.05 ? `${Math.round(house.car.v * 30)} km/h` : '';
+}
 function toggleSound() { audio.setOn(!audio.on); const b = $('soundBtn'); b.textContent = audio.on ? 'Sound on' : 'Sound off'; b.setAttribute('aria-pressed', audio.on); audio.click(); }
 $('soundBtn').onclick = toggleSound;
 $('skipIntro').onclick = skipIntro;
@@ -777,7 +826,13 @@ function tick(dt) {
   ptr.sx += (ptr.x - ptr.sx) * Math.min(1, dt * 4); ptr.sy += (ptr.y - ptr.sy) * Math.min(1, dt * 4);
   let fov = 58;
   if (player.lap) { camera.position.copy(player.lap.pos); camera.quaternion.copy(player.lap.quat); fov = player.mode === 'piano' ? 60 : 46; }
-  else if (player.mode === 'car') { house.car.seat('passenger', camera.position); camera.rotation.set(-0.3 + player.pitch - ptr.sy * 0.02, house.car.heading + Math.PI + player.yaw - ptr.sx * 0.03, 0); fov = 64; }
+  else if (player.mode === 'car') {
+    const inside = state.carView === 'in', c = house.car; c.seat(inside ? 'inside' : 'passenger', camera.position);
+    // a little body roll and road buzz sells the motion
+    const lean = inside ? Math.sin(t * 2.1) * 0.006 * c.v : 0;
+    camera.position.y += inside ? Math.sin(t * 31) * 0.0012 * c.v : 0;
+    camera.rotation.set((inside ? -0.04 : -0.3) + player.pitch - ptr.sy * 0.02, c.heading + Math.PI + player.yaw - ptr.sx * 0.03, lean); fov = inside ? 72 : 64;
+  }
   else {
     const sit = player.mode === 'sit', v = player.view, par = sit ? 0.035 : 0.05;
     const moving = player.vel > 0.2 ? 1 : 0; player.bob += ((moving) - player.bob) * Math.min(1, dt * 8);
@@ -802,7 +857,7 @@ function tick(dt) {
     // the car waits, and honks, rather than run anyone over
     { const n = house.car.nose(), inWay = player.mode === 'walk' && player.pos.y < 1 && Math.hypot(n.x - player.pos.x, n.z - player.pos.z) < 0.95; house.car.update(dt, t, inWay); if (inWay && house.car.driving && !state.carWarned) { state.carWarned = true; say('Whoa there! Mind the road, partner. I\'ll wait.', { auto: true, hold: 2, id: 'car-wait' }); } }
   }
-  updateGuides(dt);
+  updateGuides(dt); updateTouchUI(dt);
 
   // typewriter
   if (!dlg.el.hidden && dlg.shown < dlg.full.length) {
@@ -818,7 +873,7 @@ function tick(dt) {
   tvGlow.intensity += ((tv.isOn ? 2.6 : 0) - tvGlow.intensity) * Math.min(1, dt * 3);
 
   // remote: rests low in the hand and comes up when you reach for it
-  const want = player.mode === 'sit' && state.remoteIn === 'hand' && ((ptr.x > 0.3 && ptr.y > 0.05) || t - state.keyAt < 3.2 || state.phase === 'power') ? 1 : 0;
+  const want = player.mode === 'sit' && state.remoteIn === 'hand' && (TOUCH || (ptr.x > 0.3 && ptr.y > 0.05) || t - state.keyAt < 3.2 || state.phase === 'power') ? 1 : 0;
   state.raise += (want - state.raise) * Math.min(1, dt * 7);
   for (const m of Object.values(remoteParts)) {
     if (!m.userData.rest) continue;
