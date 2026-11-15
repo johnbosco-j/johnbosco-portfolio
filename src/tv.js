@@ -528,7 +528,7 @@ export class TV {
       if (np) {
         this.rr(48, 196, 420, 4, 2, 'rgba(255,255,255,0.14)'); this.rr(48, 196, 420 * (np.duration ? np.time / np.duration : 0), 4, 2, INK);
         this.text(fmt(np.time), 48, 216, `400 8.5px ${BODY}`, FAINT); this.text(np.duration ? fmt(np.duration) : '', 468, 216, `400 8.5px ${BODY}`, FAINT, 'right');
-        this.text(np.paused ? 'Paused' : 'Playing at 20% volume · shuffles when a song ends', 48, 240, `400 9px ${BODY}`, FAINT);
+        this.text(np.paused ? 'Paused' : 'Playing quietly · shuffles when a song ends', 48, 240, `400 9px ${BODY}`, FAINT);
         // little equaliser
         for (let i = 0; i < 18; i++) { const h = np.paused ? 3 : 4 + Math.abs(Math.sin(this.now * (2.2 + i * 0.37) + i)) * 26; this.rr(48 + i * 9, 300 - h, 5, h, 2, this.accent); }
       }

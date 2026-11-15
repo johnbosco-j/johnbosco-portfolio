@@ -1,6 +1,6 @@
 // Sound. Everything has a synthesised default, and every sound can be replaced by a real
 // recording: drop a file in public/audio/ with the name listed in FILES and it is used instead.
-//   public/audio/music/*.mp3          background songs listed in data.js; shuffled, 20% volume
+//   public/audio/music/*.mp3          background songs listed in data.js; shuffled, 5% volume
 //   public/audio/typewriter.mp3       one key strike (pitch is varied per letter)
 //   public/audio/footstep.mp3         one step
 //   public/audio/voice/<guide>/<lineId>.mp3   a spoken line; drives the guide's lip sync
@@ -11,7 +11,7 @@ const FILES = { typewriter: 'typewriter.mp3', footstep: 'footstep.mp3', bell: 'b
 export const audio = {
   on: true, ctx: null, buffers: {}, analyser: null, voiceEl: null, voiceLevel: 0, known: new Map(),
   // the jukebox: shuffled playlist with fades, quiet by default
-  music: { tracks: [], order: [], at: -1, el: null, vol: 0.2, duck: 1, paused: false, ready: false },
+  music: { tracks: [], order: [], at: -1, el: null, vol: 0.05, duck: 1, paused: false, ready: false },
 
   init() {
     if (this.ctx) return;

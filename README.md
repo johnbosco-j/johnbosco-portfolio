@@ -36,7 +36,7 @@ npm run dev
 
 Drop files into `public/audio/` and they are picked up automatically:
 
-- `music.mp3`: background song, looped at 20% volume
+- `music/*.mp3`: background songs listed in `src/data.js`, shuffled at 5% volume
 - `typewriter.mp3`, `footstep.mp3`: one key strike, one step
 - `voice/sheriff/<line-id>.mp3` and `voice/ranger/<line-id>.mp3`: spoken lines. When a file exists the
   guide lip-syncs to it and the caption keeps pace. Line ids are the `id:` values in `src/main.js`
