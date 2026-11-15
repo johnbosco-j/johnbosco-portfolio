@@ -166,7 +166,7 @@ export const contact = [
   { label: 'LinkedIn', value: 'linkedin.com/in/johnbosco-j', url: 'https://linkedin.com/in/johnbosco-j/' },
   { label: 'GitHub', value: 'github.com/johnbosco-j', url: 'https://github.com/johnbosco-j' },
   { label: 'Email', value: 'mailtojjohnbosco@gmail.com', url: 'mailto:mailtojjohnbosco@gmail.com' },
-  { label: 'Website', value: 'johnbosco.vercel.app', url: 'https://johnbosco.vercel.app/' },
+  { label: 'Riven', value: 'rivendevs-site.vercel.app', url: 'https://rivendevs-site.vercel.app/' },
 ];
 
 export const channels = [
@@ -206,3 +206,5 @@ export const music = [
   { file: 'track3.mp3', title: 'Oru Thaai Thetruvathupol', by: 'Flute Suresh · instrumental' },
   { file: 'track4.mp3', title: 'Tham Kirubai', by: 'ft. Jotham · online collaboration' },
 ];
+
+export const resume = { label: 'Résumé', value: 'One page · PDF', url: '/JohnboscoJ-Resume.pdf' };

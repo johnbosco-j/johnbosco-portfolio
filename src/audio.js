@@ -22,12 +22,13 @@ export const audio = {
     this.noise = b;
     for (const [k, f] of Object.entries(FILES)) this.load(k, `/audio/${f}`);
     this.startMusic();
+    // be quiet when the tab is not being looked at
+    document.addEventListener('visibilitychange', () => { const M = this.music; if (!M.el) return; if (document.hidden) M.el.pause(); else if (!M.paused) M.el.play().catch(() => {}); });
   },
+  // public/audio/manifest.json lists the optional files that are really there, so nothing is requested blind
   async exists(url) {
-    if (this.known.has(url)) return this.known.get(url);
-    let ok = false;
-    try { const r = await fetch(url, { method: 'HEAD' }); ok = r.ok && /audio|octet/.test(r.headers.get('content-type') || ''); } catch { ok = false; }
-    this.known.set(url, ok); return ok;
+    this.listed ||= fetch('/audio/manifest.json').then(r => r.ok ? r.json() : { files: [] }).then(j => new Set((j.files || []).map(f => '/audio/' + f))).catch(() => new Set());
+    return (await this.listed).has(url);
   },
   async load(key, url) {
     if (!(await this.exists(url))) return;

@@ -81,7 +81,7 @@ function applyMood() {
   stripMats.forEach(m => { m.emissiveIntensity = mood.n.strip; }); renderer.toneMappingExposure = mood.n.exp; scene.environmentIntensity = mood.n.env;
 }
 function setMood(name) {
-  if (name === mood.name) return; const M = MOODS[name]; mood.name = name;
+  if (name === mood.name || !MOODS[name]) return; const M = MOODS[name]; mood.name = name; try { localStorage.setItem('jb-mood', name); } catch { /* private window */ }
   const a = { sky: mood.sky.map(c => c.clone()), sun: mood.sun.clone(), sunPos: mood.sunPos.clone(), hemiSky: mood.hemiSky.clone(), n: { ...mood.n } };
   const b = { sky: M.sky.map(C), sun: C(M.sun), sunPos: new THREE.Vector3(...M.sunPos), hemiSky: C(M.hemiSky) };
   tween(1.5, k => {
@@ -90,6 +90,7 @@ function setMood(name) {
     applyMood();
   });
   document.querySelectorAll('#lights [data-mood]').forEach(b => b.classList.toggle('on', b.dataset.mood === name));
+  if (state.phase !== 'free') return;
   audio.click(); guide().play('think', 1.6); say(M.say, { auto: true, hold: 2.5, id: 'mood-' + name });
 }
 applyMood();
@@ -196,7 +197,7 @@ function setupRemote(gltf) {
 const log = (s, add = '\n') => { $('bootlog').textContent += s + add; };
 async function load() {
   const loader = new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath('/draco/'));
-  const bar = p => { $('bootbar').style.width = p + '%'; };
+  const bar = p => { $('bootbar').style.width = p + '%'; if (p < 100) $('enter').textContent = `Saddling up… ${Math.round(p)}%`; };
   const get = async (label, url, a, b) => { log(label.padEnd(30, '.') + ' ', ''); const g = await loader.loadAsync(url, e => { if (e.total) bar(a + (b - a) * e.loaded / e.total); }); log('ok'); bar(b); return g; };
   const loft = await get('Opening the loft ', '/models/loft.glb', 4, 52);
   fixMaterials(loft.scene); scene.add(loft.scene); scene.updateMatrixWorld(true); applyMood();
@@ -215,6 +216,8 @@ async function load() {
   renderer.compile(scene, camera); bar(100); log('ok');
   log('Dusk in Chennai. The sofa is free.');
   const b = $('enter'); b.disabled = false; b.textContent = 'Step inside'; b.focus();
+  // come back to the lighting the visitor last chose
+  let saved = null; try { saved = localStorage.getItem('jb-mood'); } catch { /* private window */ } if (saved && saved !== 'golden') setMood(saved);
 }
 
 // ---------- dialogue ----------
@@ -790,7 +793,9 @@ function updateTouchUI(dt) {
   if (back) $('btnBack').textContent = player.mode === 'sit' ? 'Stand up' : player.mode === 'car' ? 'Get out' : 'Done';
   const sp = document.getElementById('fobSpeed'); if (sp && house) sp.textContent = house.car.v > 0.05 ? `${Math.round(house.car.v * 30)} km/h` : '';
 }
-function toggleSound() { audio.setOn(!audio.on); const b = $('soundBtn'); b.textContent = audio.on ? 'Sound on' : 'Sound off'; b.setAttribute('aria-pressed', audio.on); audio.click(); }
+const prefs = { get: k => { try { return localStorage.getItem('jb-' + k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem('jb-' + k, v); } catch { /* private window */ } } };
+function toggleSound() { audio.setOn(!audio.on); const b = $('soundBtn'); b.textContent = audio.on ? 'Sound on' : 'Sound off'; b.setAttribute('aria-pressed', audio.on); prefs.set('sound', audio.on ? '1' : '0'); audio.click(); }
+if (prefs.get('sound') === '0') { audio.on = false; $('soundBtn').textContent = 'Sound off'; $('soundBtn').setAttribute('aria-pressed', 'false'); }
 $('soundBtn').onclick = toggleSound;
 $('skipIntro').onclick = skipIntro;
 $('plainBtn').onclick = () => { renderPlain($('plain'), () => { $('plain').hidden = true; }); $('plain').hidden = false; };

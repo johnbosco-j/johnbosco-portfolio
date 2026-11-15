@@ -1,6 +1,7 @@
 // The television: a 2D canvas UI rendered onto the wall TV as a texture.
 import * as THREE from 'three';
-import { profile, riven, projects, experience, awards, offClock, languages, contact, channels, music } from './data.js';
+import { profile, riven, projects, experience, awards, offClock, languages, contact as contactLinks, resume, channels, music } from './data.js';
+const contact = [...contactLinks, resume];
 import { audio } from './audio.js';
 
 const W = 1600, H = 900, K = W / 960; // Riven TV is laid out on a 960x540 dp canvas
@@ -401,7 +402,7 @@ export class TV {
     });
     this.rr(960, 650, 560, 130, 20, PANEL, LINE, 1.5);
     this.text('LANGUAGES', 986, 692, `600 22px ${BODY}`, this.accent);
-    this.wrap(languages.map(l => l.name).join('  ·  '), 986, 742, 520, 34, `500 28px ${BODY}`, INK, 1);
+    this.wrap(languages.map(l => l.name).join(' · '), 986, 740, 520, 34, `500 24px ${BODY}`, INK, 1);
   }
 
   draw_riven() {
@@ -548,11 +549,11 @@ export class TV {
     this.chrome('▲ ▼  Move      ◉  Open      ‹  Home');
     this.title('Say howdy.', 'Open to work · On-site or hybrid, Chennai');
     contact.forEach((ct, i) => {
-      const on = i === this.focus.contact, y = 300 + i * 118;
-      this.rr(80, y, 940, 100, 18, on ? '#1d2128' : PANEL, on ? this.accent : LINE, on ? 4 : 1.5);
-      this.text(ct.label.toUpperCase(), 112, y + 60, `600 22px ${BODY}`, on ? this.accent : FAINT);
-      this.text(ct.value, 290, y + 64, `600 34px ${HEAD}`, on ? INK : '#c9ccd1');
-      if (on) this.text('◉  Open', 990, y + 62, `600 22px ${BODY}`, this.accent, 'right');
+      const on = i === this.focus.contact, y = 284 + i * 98;
+      this.rr(80, y, 940, 84, 18, on ? '#1d2128' : PANEL, on ? this.accent : LINE, on ? 4 : 1.5);
+      this.text(ct.label.toUpperCase(), 112, y + 51, `600 22px ${BODY}`, on ? this.accent : FAINT);
+      this.text(ct.value, 290, y + 55, `600 32px ${HEAD}`, on ? INK : '#c9ccd1');
+      if (on) this.text('◉  Open', 990, y + 53, `600 22px ${BODY}`, this.accent, 'right');
     });
     this.rr(1080, 300, 440, 454, 20, PANEL, LINE, 1.5);
     this.text('THE SHORT VERSION', 1110, 352, `600 22px ${BODY}`, this.accent);

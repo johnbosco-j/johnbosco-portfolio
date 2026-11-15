@@ -6,9 +6,11 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 export function renderPlain(el, onClose) {
   el.innerHTML = `<div class="wrap">
     <button class="chip close" id="plainClose">Back to the loft</button>
+    <img src="/og.jpg" alt="Johnbosco J" style="width:100%;max-height:300px;object-fit:cover;border-radius:18px;margin-top:20px" />
     <h1>${esc(profile.name)}</h1>
     <p>${esc(profile.tagline)}</p>
     <p class="meta">${profile.roles.map(esc).join(' · ')} · ${esc(profile.location)}</p>
+    <p><a href="/JohnboscoJ-Resume.pdf" download>Download the résumé (PDF)</a></p>
     <h2>About</h2>
     ${profile.about.map(p => `<p>${esc(p)}</p>`).join('')}
     <div class="tags">${profile.skills.map(s => `<span>${esc(s)}</span>`).join('')}</div>

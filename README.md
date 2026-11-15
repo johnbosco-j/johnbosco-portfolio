@@ -34,7 +34,7 @@ npm run dev
 
 ## Adding sound
 
-Drop files into `public/audio/` and they are picked up automatically:
+Drop files into `public/audio/` and add each one to `public/audio/manifest.json` (paths relative to `public/audio/`). Only files listed there are requested:
 
 - `music/*.mp3`: background songs listed in `src/data.js`, shuffled at 2.5% volume
 - `typewriter.mp3`, `footstep.mp3`: one key strike, one step
