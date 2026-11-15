@@ -92,7 +92,8 @@ export function createHouse({ scene, showCard, guide, say, tween, models, drop, 
   const laptop = {};
   {
     const mac = models.macbook; mac.position.set(0.6, deskY, -3.78); mac.rotation.y = Math.PI / 2; shadow(mac); scene.add(mac);
-    mac.traverse(o => { if (o.isMesh && o.material?.name === 'Material.003') o.material = std(0xb6b8bd, { metalness: 0.85, roughness: 0.32 }); });
+    const alu = std(0x9a9ca1, { metalness: 0.9, roughness: 0.36 }), black = std(0x0b0b0d, { roughness: 0.55 }), glassM = std(0x050506, { roughness: 0.12 });
+    mac.traverse(o => { if (!o.isMesh) return; const n = o.material?.name || ''; o.material = n === 'Material.003' || n === 'Material.010' ? alu : /00[67]$/.test(n) ? glassM : black; });
     const scrT = canvasTex(1280, 832, (g, w, h) => {
       const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#2b1055'); gr.addColorStop(0.5, '#7597de'); gr.addColorStop(1, '#f4a28c'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
       g.fillStyle = 'rgba(20,20,24,0.6)'; g.fillRect(0, 0, w, 34); g.fillStyle = '#fff'; g.font = "600 18px 'Geist', sans-serif"; g.fillText('Riven Browser   File   View   History', 20, 23);
@@ -102,9 +103,9 @@ export function createHouse({ scene, showCard, guide, say, tween, models, drop, 
       g.fillStyle = '#f5f5f7'; g.font = "700 76px 'Bricolage Grotesque', sans-serif"; g.fillText('Johnbosco J', 210, 330); g.fillStyle = '#b9bcc4'; g.font = "400 30px 'Geist', sans-serif"; g.fillText('Click to sit down and browse his live sites', 214, 386);
       g.fillStyle = '#e8c98a'; g.beginPath(); g.roundRect(214, 430, 250, 62, 31); g.fill(); g.fillStyle = '#1a1309'; g.font = "600 24px 'Geist', sans-serif"; g.fillText('Open the browser', 244, 469);
     });
-    const tilt = 0.375, scr = new THREE.Mesh(new THREE.PlaneGeometry(0.336, 0.218), new THREE.MeshBasicMaterial({ map: scrT, toneMapped: false, color: 0xd8d8d8 }));
+    const tilt = 0.375, scr = new THREE.Mesh(new THREE.PlaneGeometry(0.336, 0.218), new THREE.MeshBasicMaterial({ map: scrT, toneMapped: false, color: 0xb8b8b8 }));
     scr.position.set(0, 0.128, -0.158); scr.rotation.x = -tilt; mac.add(scr); laptop.screen = scr; laptop.mac = mac;
-    const glow = new THREE.PointLight(0x9db4ff, 0.6, 1.5, 2); glow.position.set(0.9, deskY + 0.25, -3.78); scene.add(glow);
+    const glow = new THREE.PointLight(0xcfd8ff, 0.18, 1.1, 2); glow.position.set(0.82, deskY + 0.2, -3.78); scene.add(glow);
     add(mac, 'Use the laptop', () => { audio.select(); openLaptop(laptop); });
 
     const kit = new THREE.Group(); const ledMats = [];
@@ -207,36 +208,43 @@ export function createHouse({ scene, showCard, guide, say, tween, models, drop, 
     });
   }
 
-  // ---------- patio: the Ertiga ----------
-  // The car lives in a rig so its lamps travel with it. It has about two metres of patio to
-  // roll along, so "driving" is forward to the gate and back again until someone says stop.
-  const car = { on: false, driving: false, rig: new THREE.Group(), v: 0, dir: 1, wheels: [], ZMIN: -4.15, ZMAX: -2.45 };
+  // ---------- patio: the Ertiga, scaled down to a ride-on toy ----------
+  // Small enough for the guide to ride on the roof and to lap the patio properly.
+  const car = { on: false, driving: false, rig: new THREE.Group(), v: 0, a: Math.PI / 2, heading: 0, SCALE: 0.36, R: 0.62, held: false };
   {
-    const c = models.car, floor = drop(-4.12, -3.4, 1.5) ?? 0.1; c.rotation.y = Math.PI; car.rig.add(c); car.rig.position.set(-4.14, floor - 0.1, -3.55); shadow(c); scene.add(car.rig); car.floor = floor;
+    const c = models.car, floor = drop(-4.12, -3.4, 1.5) ?? 0.1; c.rotation.y = Math.PI; car.rig.add(c); car.rig.scale.setScalar(car.SCALE); shadow(c); scene.add(car.rig); car.floor = floor;
     c.traverse(o => { if (o.isMesh && /glass/i.test(o.material.name)) { o.material.transparent = true; o.material.opacity = 0.35; o.material.depthWrite = false; o.castShadow = false; } });
-    const lampM = new THREE.MeshBasicMaterial({ color: 0xfff3cf, transparent: true, opacity: 0, toneMapped: false }), beams = [];
-    for (const sd of [-1, 1]) { const l = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 12), lampM); l.scale.set(1.5, 0.7, 0.4); l.position.set(sd * 0.62, 0.76, 2.2); car.rig.add(l); const b = new THREE.SpotLight(0xfff0c8, 0, 7, 0.55, 0.6, 1.4); b.position.copy(l.position); b.target.position.set(sd * 0.62, 0, 6.5); car.rig.add(b, b.target); beams.push(b); }
-    const tailM = new THREE.MeshBasicMaterial({ color: 0xff2a1a, transparent: true, opacity: 0, toneMapped: false });
-    for (const sd of [-1, 1]) { const l = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 10), tailM); l.scale.set(1.2, 1.4, 0.3); l.position.set(sd * 0.66, 0.95, -1.97); car.rig.add(l); }
-    car.lights = on => { if (car.on === on) return; car.on = on; audio.click(); tween(0.5, k => { const v = on ? k : 1 - k; lampM.opacity = v; tailM.opacity = v * 0.9; beams.forEach(b => { b.intensity = 14 * v; }); }); };
+    // put the lamps where the model's nose and tail really are
+    const bb = new THREE.Box3().setFromObject(c), sz = bb.getSize(new THREE.Vector3()); car.size = sz.clone().multiplyScalar(car.SCALE);
+    c.position.y = -bb.min.y;
+    const headM = new THREE.MeshBasicMaterial({ color: 0xfff3cf, transparent: true, opacity: 0, toneMapped: false, depthWrite: false });
+    const tailM = new THREE.MeshBasicMaterial({ color: 0xff2a1a, transparent: true, opacity: 0, toneMapped: false, depthWrite: false }), beams = [];
+    for (const sd of [-1, 1]) {
+      const h = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 12), headM); h.scale.set(1.9, 0.9, 0.35); h.position.set(sd * sz.x * 0.33, sz.y * 0.43, bb.max.z - 0.06); car.rig.add(h);
+      const t = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 10), tailM); t.scale.set(0.9, 2.2, 0.25); t.position.set(sd * sz.x * 0.4, sz.y * 0.6, bb.min.z + 0.1); car.rig.add(t);
+      const b = new THREE.SpotLight(0xfff0c8, 0, 4.5, 0.5, 0.7, 1.6); b.position.set(sd * sz.x * 0.33, sz.y * 0.43, bb.max.z); b.target.position.set(sd * sz.x * 0.33, 0, bb.max.z + 7); car.rig.add(b, b.target); beams.push(b);
+    }
+    const C = V(-4.12, floor, -2.95), RX = 0.6, RZ = 2.25;
+    const place = () => { const p = car.rig.position; p.set(C.x + Math.cos(car.a) * RX, floor, C.z + Math.sin(car.a) * RZ); const dx = -Math.sin(car.a) * RX, dz = Math.cos(car.a) * RZ; car.heading = Math.atan2(dx, dz); car.rig.rotation.y = car.heading; };
+    place();
+    car.lights = on => { if (car.on === on) return; car.on = on; audio.click(); const a0 = headM.opacity; tween(0.45, k => { const v = a0 + ((on ? 1 : 0) - a0) * k; headM.opacity = v; tailM.opacity = v * 0.85; beams.forEach(b => { b.intensity = 5 * v; }); }); };
     car.start = () => { if (car.driving) return; car.lights(true); car.driving = true; audio.engine(); };
     car.stop = () => { if (!car.driving) return; car.driving = false; audio.click(); };
-    // world position of a seat: the Ertiga is right-hand drive, so the driver sits on the right
-    car.seat = (who, out = new THREE.Vector3()) => out.copy(who === 'driver' ? V(-0.34, 1.03, 1.1) : who === 'bonnet' ? V(0, 0.98, 1.55) : V(0.34, 1.2, 0.3)).add(car.rig.position);
+    // where the guide rides, and where the ride-along camera sits (just behind and above)
+    car.seat = (who, out = new THREE.Vector3()) => car.rig.localToWorld(out.copy(who === 'driver' ? V(0, sz.y - 0.02, -0.15) : V(0, sz.y + 1.75, -4.6)));
     const d = offClock.find(o => o.title === 'Driving');
-    add(c, 'The Ertiga: use the key fob', () => { car.lights(!car.on); if (car.on) audio.horn(); showCard({ eyebrow: 'Off the clock', title: d.title, sub: 'Suzuki Ertiga', body: d.body + ' Use the key fob at the bottom right: get in, let your guide drive, and get out whenever you like.' }); });
+    add(c, 'The Ertiga: use the key fob', () => { car.lights(!car.on); if (car.on) audio.horn(); showCard({ eyebrow: 'Off the clock', title: d.title, sub: 'A pint-sized Suzuki Ertiga', body: d.body + ' Use the key fob at the bottom right: your guide drives, and you can ride along or wave them down whenever you like.' }); });
     let hum = 0;
-    updaters.push((dt, t) => {
-      const want = car.driving ? 0.85 * car.dir : 0; car.v += (want - car.v) * Math.min(1, dt * 1.6);
-      if (Math.abs(car.v) > 0.002) {
-        const p = car.rig.position; p.z += car.v * dt;
-        if (p.z > car.ZMAX && car.dir > 0) { car.dir = -1; } if (p.z < car.ZMIN && car.dir < 0) { car.dir = 1; }
-        p.z = Math.max(car.ZMIN - 0.05, Math.min(car.ZMAX + 0.05, p.z));
-        for (const w of car.wheels) w.rotation.x += car.v * dt / 0.31;
-      }
-      if (car.driving) { hum -= dt; if (hum <= 0) { hum = 0.22; if (audio.ok()) { audio.tone({ freq: 58 + Math.abs(car.v) * 26, dur: 0.3, type: 'sawtooth', vol: 0.03 }); if (car.dir < 0 && Math.floor(t * 1.6) % 2 === 0) audio.tone({ freq: 1150, dur: 0.12, type: 'square', vol: 0.012 }); } } }
-      c.position.y = car.driving || car.on ? Math.sin(t * 38) * 0.0012 : 0;
-    });
+    // `blockedBy(pos)` lets main.js say when the visitor is standing in the way
+    car.update = (dt, t, inWay) => {
+      if (car.driving && inWay && !car.held) { car.held = true; audio.horn(); } if (!inWay) car.held = false;
+      const want = car.driving && !inWay ? 1.25 : 0; car.v += (want - car.v) * Math.min(1, dt * (want ? 1.4 : 5));
+      if (car.v > 0.003) { car.a += car.v * dt / Math.hypot(Math.sin(car.a) * RX, Math.cos(car.a) * RZ); place(); }
+      if (car.driving && !inWay) { hum -= dt; if (hum <= 0) { hum = 0.2; if (audio.ok()) audio.tone({ freq: 70 + car.v * 30, dur: 0.26, type: 'sawtooth', vol: 0.022 }); } }
+      c.position.y = -bb.min.y + (car.v > 0.05 ? Math.sin(t * 40) * 0.004 : 0); c.rotation.z = car.v > 0.05 ? Math.sin(t * 3) * 0.012 : 0;
+    };
+    // nose position, for "is someone in front of me"
+    car.nose = (out = new THREE.Vector3()) => car.rig.localToWorld(out.set(0, 0.3, sz.z * 0.5 + 0.9));
   }
 
   // ---------- on the walls: the resume and the autograph ----------
@@ -255,6 +263,28 @@ export function createHouse({ scene, showCard, guide, say, tween, models, drop, 
         const a = document.createElement('a'); a.href = '/JohnboscoJ-Resume.pdf'; a.download = 'JohnboscoJ-Resume.pdf'; document.body.appendChild(a); a.click(); a.remove();
         showCard({ eyebrow: 'One page', title: 'Résumé', sub: 'Full-Stack Developer · AI/ML Engineer · Founder, Riven', body: 'The download has started. Pre-final year CSE at LICET, sole developer of the department ERP, founder of Riven, and looking for Summer 2027 full-stack and AI/ML internships.', link: '/JohnboscoJ-Resume.pdf', linkLabel: 'Open the PDF' });
       });
+    }
+    // the portrait: very big, on the living-room wall beside the TV. Drop the photo at public/photo.jpg.
+    const pw = cast(V(-2.12, 2.0, -0.9), V(0, 0, 1), 3);
+    if (pw) {
+      const PW = 1.24, PH = 2.2, fr = new THREE.Group(); fr.position.set(-2.12, 2.08, pw.z - 0.03); fr.rotation.y = Math.PI; scene.add(fr);
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(PW + 0.1, PH + 0.1, 0.05), std(0x14110f, { roughness: 0.4 })); fr.add(frame); shadow(frame);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xbdbdbd, toneMapped: false });
+      const pic = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), mat); pic.position.z = 0.027; fr.add(pic);
+      mat.map = canvasTex(360, 640, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#3b3a5c'); gr.addColorStop(1, '#c47a5a'); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = "700 34px 'Space Grotesk', sans-serif"; g.fillText('Johnbosco J', w / 2, h / 2 - 10); g.font = "400 17px 'Inter', sans-serif"; g.fillText('Founder, Riven', w / 2, h / 2 + 24); });
+      loader.load('/photo.jpg', t => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; const ia = t.image.width / t.image.height, fa = PW / PH; if (ia > fa) { t.repeat.x = fa / ia; t.offset.x = (1 - t.repeat.x) / 2; } else { t.repeat.y = ia / fa; t.offset.y = (1 - t.repeat.y) / 2; } mat.map = t; mat.needsUpdate = true; }, undefined, () => {});
+      const sp = new THREE.SpotLight(0xfff1d6, 2.2, 4.5, 0.6, 0.8, 1.4); sp.position.set(-2.12, 3.7, pw.z - 1.3); sp.target = frame; scene.add(sp);
+      add(fr, 'The man himself', () => { audio.chime(); guide().play('tip', 1.8); say('That\'s him. Johnbosco J: builds clear software, and a company to ship it.', { auto: true, hold: 3 }); });
+    }
+    // a wall clock that keeps real time
+    const cw = cast(V(1.38, 2.55, -0.6), V(0, 0, 1), 3);
+    if (cw) {
+      const ck = new THREE.Group(); ck.position.set(1.38, 2.55, cw.z - 0.02); ck.rotation.y = Math.PI; scene.add(ck);
+      ck.add(new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.025, 48).rotateX(Math.PI / 2), std(0x15110e, { roughness: 0.4 })));
+      const face = new THREE.Mesh(new THREE.CircleGeometry(0.155, 48), new THREE.MeshStandardMaterial({ map: canvasTex(256, 256, g => { g.fillStyle = '#f4f1ea'; g.fillRect(0, 0, 256, 256); g.strokeStyle = '#1a1512'; for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; g.lineWidth = i % 3 ? 3 : 7; g.beginPath(); g.moveTo(128 + Math.sin(a) * 100, 128 - Math.cos(a) * 100); g.lineTo(128 + Math.sin(a) * 116, 128 - Math.cos(a) * 116); g.stroke(); } }), roughness: 0.6 })); face.position.z = 0.013; ck.add(face);
+      const hand = (len, w, col) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, len, 0.004).translate(0, len / 2 - 0.012, 0), std(col)); m.position.z = 0.018; ck.add(m); return m; };
+      const hh = hand(0.085, 0.012, 0x15110e), mh = hand(0.125, 0.008, 0x15110e), sh = hand(0.135, 0.003, 0xc8372d);
+      updaters.push(() => { const n = new Date(), s = n.getSeconds() + n.getMilliseconds() / 1000, m = n.getMinutes() + s / 60, h = n.getHours() % 12 + m / 60; sh.rotation.z = -s / 60 * Math.PI * 2; mh.rotation.z = -m / 60 * Math.PI * 2; hh.rotation.z = -h / 12 * Math.PI * 2; });
     }
     // the autograph, as a neon sign high on the TV wall
     const high = cast(V(-0.15, 3.75, -1.2), V(0, 0, 1), 4);
@@ -277,6 +307,32 @@ export function createHouse({ scene, showCard, guide, say, tween, models, drop, 
     }
   }
 
+  // ---------- lived-in details ----------
+  {
+    const on = (x, z, from, max = 1.2) => drop(x, z, from, max);
+    const put = (mesh, x, y, z, ry = 0) => { if (y === null) return null; mesh.position.set(x, y, z); mesh.rotation.y = ry; shadow(mesh); scene.add(mesh); return mesh; };
+    const book = (w, h, d, col) => { const g = new THREE.Group(); const cover = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), std(col, { roughness: 0.75 })); cover.position.y = h / 2; g.add(cover); const pages = new THREE.Mesh(new THREE.BoxGeometry(w - 0.006, h - 0.006, d - 0.004), std(0xf1ece0)); pages.position.set(0.004, h / 2, 0); g.add(pages); return g; };
+    const stack = (x, z, from, cols, ry = 0) => { let y = on(x, z, from); if (y === null) return; cols.forEach((c, i) => { const h = 0.022 + (i % 2) * 0.008, b = book(0.2 - i * 0.012, h, 0.145 - i * 0.008, c); put(b, x, y, z, ry + (i - 1) * 0.12); y += h; }); return y; };
+    const mug = (x, z, from, col = 0xf2efe8) => { const y = on(x, z, from); if (y === null) return; const g = new THREE.Group(); const body = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.034, 0.085, 24, 1, true), std(col, { roughness: 0.35, side: THREE.DoubleSide })); body.position.y = 0.0425; g.add(body); const base = new THREE.Mesh(new THREE.CircleGeometry(0.034, 24).rotateX(-Math.PI / 2), std(col)); base.position.y = 0.003; g.add(base); const tea = new THREE.Mesh(new THREE.CircleGeometry(0.035, 24).rotateX(-Math.PI / 2), std(0x5a3418, { roughness: 0.2 })); tea.position.y = 0.07; g.add(tea); const h = new THREE.Mesh(new THREE.TorusGeometry(0.024, 0.006, 8, 16, Math.PI), std(col, { roughness: 0.35 })); h.position.set(0.04, 0.045, 0); h.rotation.z = -Math.PI / 2; g.add(h); put(g, x, y, z, Math.random() * 6); };
+    // coffee table: a few books, a mug on a coaster, a tray with the car key
+    stack(-0.72, -0.5, 0.9, [0x27408b, 0xb4451f, 0xe8e2d2]);
+    mug(-0.2, -0.3, 0.9, 0xe9e4d8);
+    { const y = on(0.0, -1.0, 0.9); const tray = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.1, 0.014, 32), std(0x1a1512, { roughness: 0.35 })); if (put(tray, 0.0, y === null ? null : y + 0.007, -1.0)) { const key = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.012, 0.06), std(0x0d0d0f, { roughness: 0.3 })); put(key, 0.02, y + 0.02, -1.0, 0.5); const ring = new THREE.Mesh(new THREE.TorusGeometry(0.014, 0.002, 6, 16).rotateX(Math.PI / 2), std(0xbfc3c9, { metalness: 0.9, roughness: 0.3 })); put(ring, -0.03, y + 0.017, -0.97); } }
+    // TV console: a row of books, a small speaker
+    { const y = on(-1.05, 0.5, 1.15); if (y !== null && y > 0.4) { [0xb4451f, 0x1f6f5b, 0x27408b, 0xe8c98a, 0x4a4744, 0x7a3e9d].forEach((c, i) => { const b = book(0.15, 0.2 + (i % 3) * 0.018, 0.028 + (i % 2) * 0.008, c); b.rotation.z = 0; put(b, -1.2 + i * 0.04, y, 0.52, Math.PI / 2); }); const spk = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.2, 0.12), std(0x111214, { roughness: 0.6 })); put(spk, 0.55, y + 0.1, 0.52); const cone = new THREE.Mesh(new THREE.CircleGeometry(0.04, 24), std(0x2b2d31)); cone.position.set(0.55, y + 0.1, 0.459); cone.rotation.y = Math.PI; scene.add(cone); } }
+    // kitchen island: fruit bowl and two mugs; counter: kettle
+    { const y = on(-0.25, -4.12, 1.6); if (y !== null) { const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.15, 28, 14, 0, Math.PI * 2, Math.PI * 0.55, Math.PI * 0.45), std(0xe9e4d8, { roughness: 0.3, side: THREE.DoubleSide })); put(bowl, -0.25, y + 0.15, -4.12); [[0, 0xe0a100], [0.07, 0xc8372d], [-0.06, 0xe57f17], [0.02, 0x7fae2e]].forEach(([dx, c], i) => { const f = new THREE.Mesh(new THREE.SphereGeometry(0.042, 16, 12), std(c, { roughness: 0.45 })); put(f, -0.25 + dx, y + 0.075 + (i === 3 ? 0.04 : 0), -4.12 + (i - 1.5) * 0.045); }); } }
+    mug(-1.45, -3.95, 1.6, 0x27408b); mug(-1.3, -4.05, 1.6, 0xe9e4d8);
+    { const y = on(-1.3, -5.82, 1.5); if (y !== null && y > 0.6) { const k = new THREE.Group(); const b = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.085, 0.19, 24), std(0xcfd2d8, { metalness: 0.9, roughness: 0.25 })); b.position.y = 0.095; k.add(b); const lid = new THREE.Mesh(new THREE.SphereGeometry(0.07, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), std(0x15110e)); lid.position.y = 0.19; lid.scale.y = 0.45; k.add(lid); const hd = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.011, 8, 16, Math.PI), std(0x15110e)); hd.position.set(0.085, 0.11, 0); hd.rotation.z = -Math.PI / 2; k.add(hd); put(k, -1.3, y, -5.82, 0.6); } }
+    // studio desk: mug, notebook and pen, a desk lamp, and a set list on the keyboard's music rest
+    mug(0.52, -3.02, 4.4, 0x15110e);
+    { const y = on(0.7, -3.54, 4.4); if (y !== null) { const nb = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.012, 0.1), std(0x1f6f5b, { roughness: 0.7 })); put(nb, 0.72, y + 0.006, -3.545, Math.PI / 2 + 0.1); const pen = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.13, 8).rotateZ(Math.PI / 2), std(0xe8c98a, { metalness: 0.8, roughness: 0.3 })); put(pen, 0.72, y + 0.017, -3.545, 0.4); } }
+    { const y = on(0.44, -3.02, 4.4); if (y !== null) { const L = new THREE.Group(); const base = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.065, 0.015, 24), std(0x15110e)); base.position.y = 0.0075; L.add(base); const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.34, 8), std(0xbfc3c9, { metalness: 0.9, roughness: 0.3 })); arm.position.y = 0.18; L.add(arm); const shade = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.09, 24, 1, true), std(0x15110e, { side: THREE.DoubleSide })); shade.position.set(0.05, 0.36, 0); shade.rotation.z = -0.5; L.add(shade); const bulb = new THREE.PointLight(0xffd9a0, 0.28, 1.2, 2); bulb.position.set(0.07, 0.31, 0); L.add(bulb); put(L, 0.44, y, -3.02, -0.4); } }
+    { const sheet = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.21), new THREE.MeshStandardMaterial({ map: canvasTex(600, 420, (g, w, h) => { g.fillStyle = '#f7f4ec'; g.fillRect(0, 0, w, h); g.fillStyle = '#1a1512'; g.font = "700 30px 'Space Grotesk', sans-serif"; g.fillText('Sunday Mass · set list', 28, 50); g.strokeStyle = '#1a1512'; g.lineWidth = 1.5; for (let s = 0; s < 3; s++) for (let l = 0; l < 5; l++) { const y = 96 + s * 104 + l * 11; g.beginPath(); g.moveTo(28, y); g.lineTo(w - 28, y); g.stroke(); } for (let i = 0; i < 46; i++) { const s = Math.floor(i / 16), x = 60 + (i % 16) * 33, y = 96 + s * 104 + ((i * 7) % 9) * 5.5; g.beginPath(); g.ellipse(x, y, 7, 5, -0.4, 0, 7); g.fill(); g.fillRect(x + 6, y - 30, 1.8, 30); } }), roughness: 0.9, side: THREE.DoubleSide })); sheet.position.set(0.415, deskY + 0.26, -4.56); sheet.rotation.set(0, Math.PI / 2, 0); sheet.rotateX(-0.28); scene.add(sheet); const rest = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.012, 0.03), std(0x15110e)); rest.position.set(0.42, deskY + 0.152, -4.56); rest.rotation.y = Math.PI / 2; scene.add(rest); }
+    // a doormat in the back hall
+    { const y = on(1.45, -6.75, 0.8); if (y !== null) { const mat = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.5), new THREE.MeshStandardMaterial({ map: canvasTex(400, 250, (g, w, h) => { g.fillStyle = '#6b5136'; g.fillRect(0, 0, w, h); g.strokeStyle = '#3a2b1c'; g.lineWidth = 10; g.strokeRect(12, 12, w - 24, h - 24); g.fillStyle = '#1a1309'; g.font = "700 76px 'Space Grotesk', sans-serif"; g.textAlign = 'center'; g.fillText('HOWDY', w / 2, h / 2 + 26); }), roughness: 1 })); mat.rotation.x = -Math.PI / 2; mat.rotation.z = Math.PI; mat.position.set(1.45, y + 0.006, -6.75); mat.receiveShadow = true; scene.add(mat); } }
+  }
+
   // ---------- the hen ----------
   const hen = { root: new THREE.Group(), target: null, wait: 2, jump: 0 };
   {
@@ -291,7 +347,7 @@ export function createHouse({ scene, showCard, guide, say, tween, models, drop, 
     kitchen: { name: 'Fridge door', at: V(0.4, 0.15, -5.3), r: 1.1, stand: [V(0.42, 0.15, -4.82), 0], guide: V(-0.3, drop(-0.3, -5.78, 1.5) ?? 0.95, -5.78), gesture: 'pointR', hint: 'Click a note, a magnet or the checklist', line: ['kitchen', 'Everything on this fridge does something. Notes reach him, the checklist ticks, and Sous will plan your dinner.'] },
     studio: { name: 'Studio desk', at: V(0.62, 3.0, -3.6), r: 1.0, stand: [V(1.28, 3.0, -3.62), Math.PI / 2], guide: V(0.5, deskY, -4.02), gesture: 'pointL', hint: 'Click the laptop or the trainer kit', line: ['studio', 'Up here is where the work happens. Sit at the laptop and browse his live sites, or run the 8086 trainer kit.'] },
     keys: { name: 'Keyboard', at: V(0.62, 3.0, -4.6), r: 0.75, stand: [V(1.3, 3.0, -4.56), Math.PI / 2], guide: V(0.42, deskY + 0.13, -4.0), gesture: 'cheer', hint: 'Press E to sit down and play', line: ['keys', 'He plays keyboard for Sunday Mass. Press E to sit down. All sixty-one keys work, and your own keyboard plays it too.'] },
-    patio: { name: 'Patio', at: V(-4.1, 0.1, -1.6), r: 2.6, stand: [V(-4.15, 0.1, 0.3), 0], guide: V(-3.35, 0.1, -0.6), gesture: 'pointL', hint: 'Use the key fob, bottom right', line: ['patio', 'And out back, his other love: driving. The key fob is yours. Hop in and I\'ll take the wheel.'] },
+    patio: { name: 'Patio', at: V(-4.1, 0.1, -1.6), r: 2.6, stand: [V(-4.15, 0.1, 0.3), 0], guide: V(-3.35, 0.1, -0.6), gesture: 'pointL', hint: 'Use the key fob, bottom right', line: ['patio', 'And out back, his other love: driving. The key fob is yours. Say the word and I\'ll take her for a lap.'] },
   };
   return { stations, clickables, piano, hen, car, laptop, update: (dt, t) => updaters.forEach(u => u(dt, t)) };
 }

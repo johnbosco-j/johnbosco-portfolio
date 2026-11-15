@@ -1,13 +1,17 @@
 // Sound. Everything has a synthesised default, and every sound can be replaced by a real
 // recording: drop a file in public/audio/ with the name listed in FILES and it is used instead.
-//   public/audio/music.mp3            background song, looped at 20% volume
+//   public/audio/music/*.mp3          background songs listed in data.js; shuffled, 20% volume
 //   public/audio/typewriter.mp3       one key strike (pitch is varied per letter)
 //   public/audio/footstep.mp3         one step
 //   public/audio/voice/<guide>/<lineId>.mp3   a spoken line; drives the guide's lip sync
+import { music as TRACKS } from './data.js';
+
 const FILES = { typewriter: 'typewriter.mp3', footstep: 'footstep.mp3', bell: 'bell.mp3' };
 
 export const audio = {
-  on: true, ctx: null, buffers: {}, music: null, analyser: null, voiceEl: null, voiceLevel: 0, known: new Map(),
+  on: true, ctx: null, buffers: {}, analyser: null, voiceEl: null, voiceLevel: 0, known: new Map(),
+  // the jukebox: shuffled playlist with fades, quiet by default
+  music: { tracks: [], order: [], at: -1, el: null, vol: 0.2, duck: 1, paused: false, ready: false },
 
   init() {
     if (this.ctx) return;
@@ -17,11 +21,7 @@ export const audio = {
     for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
     this.noise = b;
     for (const [k, f] of Object.entries(FILES)) this.load(k, `/audio/${f}`);
-    // background song, if one has been provided
-    this.exists('/audio/music.mp3').then(ok => {
-      if (!ok) return;
-      const m = this.music = new Audio('/audio/music.mp3'); m.loop = true; m.volume = this.on ? 0.2 : 0; m.play().catch(() => {});
-    });
+    this.startMusic();
   },
   async exists(url) {
     if (this.known.has(url)) return this.known.get(url);
@@ -33,7 +33,35 @@ export const audio = {
     if (!(await this.exists(url))) return;
     try { this.buffers[key] = await this.ctx.decodeAudioData(await (await fetch(url)).arrayBuffer()); } catch { /* keep the synth */ }
   },
-  setOn(v) { this.on = v; if (this.master) this.master.gain.value = v ? 1 : 0; if (this.music) this.music.volume = v ? 0.2 : 0; if (this.voiceEl) this.voiceEl.muted = !v; },
+  setOn(v) { this.on = v; if (this.master) this.master.gain.value = v ? 1 : 0; if (this.voiceEl) this.voiceEl.muted = !v; },
+  async startMusic() {
+    const M = this.music;
+    for (const t of TRACKS) if (await this.exists(`/audio/music/${t.file}`)) M.tracks.push(t);
+    if (!M.tracks.length) return;
+    M.ready = true; this.shuffle(); this.playAt(0);
+    // one timer handles every fade: in at the start, out before the end, and for pause, skip and ducking
+    setInterval(() => {
+      const el = M.el; if (!el) return;
+      const left = (el.duration || 1e9) - el.currentTime, edge = Math.min(1, el.currentTime / 3, left / 3.5);
+      const want = (this.on && !M.paused && !M.leaving ? M.vol : 0) * Math.max(0, edge) * M.duck;
+      el.volume = Math.max(0, Math.min(1, el.volume + Math.sign(want - el.volume) * Math.min(Math.abs(want - el.volume), 0.012)));
+      if (M.paused && el.volume < 0.004 && !el.paused) el.pause();
+      if (M.leaving && el.volume < 0.004) { M.leaving = false; this.playAt(M.nextAt); }
+    }, 50);
+  },
+  shuffle() { const M = this.music, last = M.order[M.at]; M.order = M.tracks.map((_, i) => i).sort(() => Math.random() - 0.5); if (M.order.length > 1 && M.order[0] === last) M.order.push(M.order.shift()); },
+  playAt(i) {
+    const M = this.music; if (!M.ready) return;
+    if (i >= M.order.length) { this.shuffle(); i = 0; } if (i < 0) i = M.order.length - 1;
+    M.at = i; if (M.el) { M.el.pause(); M.el.onended = null; }
+    const el = M.el = new Audio(`/audio/music/${M.tracks[M.order[i]].file}`); el.volume = 0; el.onended = () => this.playAt(M.at + 1);
+    if (!M.paused) el.play().catch(() => {});
+  },
+  // fade the current song out, then start another
+  skip(dir = 1) { const M = this.music; if (!M.ready) return; M.paused = false; M.nextAt = M.at + dir; M.leaving = true; },
+  pick(trackIndex) { const M = this.music; if (!M.ready) return; let i = M.order.indexOf(trackIndex); if (i < 0) return; if (i === M.at && !M.paused) return; M.paused = false; M.nextAt = i; M.leaving = true; },
+  toggleMusic() { const M = this.music; if (!M.ready) return; M.paused = !M.paused; if (!M.paused) M.el.play().catch(() => {}); },
+  nowPlaying() { const M = this.music; if (!M.ready || !M.el) return null; return { index: M.order[M.at], ...M.tracks[M.order[M.at]], time: M.el.currentTime, duration: M.el.duration || 0, paused: M.paused }; },
 
   sample(key, vol = 1, rate = 1) {
     const b = this.buffers[key]; if (!b) return false;
@@ -118,12 +146,12 @@ export const audio = {
       const src = this.ctx.createMediaElementSource(el); this.analyser = this.ctx.createAnalyser(); this.analyser.fftSize = 256; this.bins = new Uint8Array(128);
       src.connect(this.analyser); this.analyser.connect(this.master);
       await new Promise((res, rej) => { el.onloadedmetadata = res; el.onerror = rej; });
-      if (this.music) this.music.volume = this.on ? 0.1 : 0;
-      el.onended = () => { this.analyser = null; if (this.music) this.music.volume = this.on ? 0.2 : 0; };
+      this.music.duck = 0.45;
+      el.onended = () => { this.analyser = null; this.music.duck = 1; };
       await el.play(); return el.duration;
     } catch { this.analyser = null; return null; }
   },
-  stopVoice() { if (this.voiceEl) { this.voiceEl.pause(); this.voiceEl = null; } this.analyser = null; if (this.music) this.music.volume = this.on ? 0.2 : 0; },
+  stopVoice() { if (this.voiceEl) { this.voiceEl.pause(); this.voiceEl = null; } this.analyser = null; this.music.duck = 1; },
   // 0..1 loudness of the playing voice, for lip sync
   level() {
     if (!this.analyser) return -1;

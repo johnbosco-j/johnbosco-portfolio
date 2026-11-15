@@ -136,3 +136,11 @@ body.has-dock #dialog::after { display:none; }
 @media (max-width: 760px) { #fob { right:10px; bottom:86px; width:210px; } }
 
 body.focus #dock, body.focus #objective { display:none !important; }
+
+/* ---- no shortcut bar: lighting sits in the top bar ---- */
+#lights { display:flex; gap:2px; padding:3px; border-radius:999px; background:var(--panel); border:1px solid var(--line); backdrop-filter:blur(8px); }
+#lights button { display:grid; place-items:center; width:30px; height:30px; border-radius:50%; border:0; background:none; color:var(--dim); }
+#lights button svg { width:17px; height:17px; } #lights button:hover { color:var(--ink); background:rgba(255,255,255,.08); }
+#lights button.on { background:rgba(232,201,138,.2); color:var(--gold); }
+#help { top:58px; bottom:auto; }
+#fob { bottom:22px; }

@@ -177,6 +177,7 @@ export const channels = [
   { id: 'awards', name: 'Awards', accent: '#ffd166', blurb: 'Prizes won' },
   { id: 'offclock', name: 'Off the Clock', accent: '#ff8a7a', blurb: 'Away from the IDE' },
   { id: 'contact', name: 'Contact', accent: '#86efac', blurb: 'Say howdy' },
+  { id: 'music', name: 'Music', accent: '#f472b6', blurb: 'Now playing' },
 ];
 
 // Sites the studio laptop's browser is allowed to open. `frame: false` means the site
@@ -196,3 +197,12 @@ export const sites = [
 
 // Who is guiding. Change the display names here.
 export const guides = { sheriff: { name: 'Sheriff' }, ranger: { name: 'Buzz' } };
+
+// Background music: shuffled, 20% volume, changeable from the TV's Music app.
+// Files live in public/audio/music/. Only list tracks you have the right to publish.
+export const music = [
+  { file: 'track1.mp3', title: 'Ebenesare', by: 'Flute cover' },
+  { file: 'track2.mp3', title: 'Ennil Adanga Sthothiram', by: 'The Menorah Orchestra · instrumental' },
+  { file: 'track3.mp3', title: 'Oru Thaai Thetruvathupol', by: 'Flute Suresh · instrumental' },
+  { file: 'track4.mp3', title: 'Tham Kirubai', by: 'ft. Jotham · online collaboration' },
+];

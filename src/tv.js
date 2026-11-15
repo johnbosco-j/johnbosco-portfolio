@@ -1,6 +1,7 @@
 // The television: a 2D canvas UI rendered onto the wall TV as a texture.
 import * as THREE from 'three';
-import { profile, riven, projects, experience, awards, offClock, languages, contact, channels } from './data.js';
+import { profile, riven, projects, experience, awards, offClock, languages, contact, channels, music } from './data.js';
+import { audio } from './audio.js';
 
 const W = 1600, H = 900, K = W / 960; // Riven TV is laid out on a 960x540 dp canvas
 const INK = '#F5F5F7', DIM = 'rgba(245,245,247,0.68)', FAINT = 'rgba(245,245,247,0.40)', BG = '#08080A', PANEL = 'rgba(255,255,255,0.075)', LINE = 'rgba(255,255,255,0.12)', ONINK = '#0A0A0A';
@@ -32,7 +33,7 @@ export class TV {
     this.texture.colorSpace = THREE.SRGBColorSpace;
     this.texture.anisotropy = 8;
     this.screen = 'off';
-    this.focus = { home: 0, projects: 0, experience: 0, awards: 0, contact: 0, settings: 0 };
+    this.focus = { home: 0, projects: 0, experience: 0, awards: 0, contact: 0, settings: 0, music: 0 };
     this.zone = 'main'; this.settings = { backdrop: 0, typeface: 0 }; this.lastInput = 0; this.sub = null;
     this.detail = false;
     this.changedAt = 0; this.bootAt = 0; this.now = 0;
@@ -106,6 +107,15 @@ export class TV {
       if (a === 'up') { if (row > 0) f.projects -= 4; else this.zone = 'tabs'; }
       if (a === 'down' && row < 2) f.projects += 4;
       if (a === 'ok') { this.detail = true; this.changedAt = this.now; }
+      return;
+    }
+    if (s === 'music') {
+      if (a === 'up') f.music = clamp(f.music - 1, music.length);
+      if (a === 'down') f.music = clamp(f.music + 1, music.length);
+      if (a === 'ok') audio.pick(f.music);
+      if (a === 'right') audio.skip(1);
+      if (a === 'left') audio.skip(-1);
+      if (a === 'play') audio.toggleMusic();
       return;
     }
     if (s === 'experience' || s === 'awards' || s === 'contact') {
@@ -250,6 +260,7 @@ export class TV {
     if (id === 'experience') { c.roundRect(-15, -8, 30, 22, 4); c.moveTo(-6, -8); c.lineTo(-6, -14); c.lineTo(6, -14); c.lineTo(6, -8); }
     if (id === 'awards') { for (let i = 0; i < 10; i++) { const r = i % 2 ? 7 : 16, a = (i / 10) * Math.PI * 2 - Math.PI / 2; c[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, Math.sin(a) * r); } c.closePath(); }
     if (id === 'offclock') { c.arc(-8, 10, 5, 0, 7); c.moveTo(-3, 10); c.lineTo(-3, -14); c.lineTo(12, -17); c.lineTo(12, 6); c.moveTo(17, 6); c.arc(12, 6, 5, 0, 7); }
+    if (id === 'music') { c.arc(-7, 9, 5, 0, 7); c.moveTo(-2, 9); c.lineTo(-2, -13); c.lineTo(12, -16); c.lineTo(12, 5); c.moveTo(17, 5); c.arc(12, 5, 5, 0, 7); }
     if (id === 'contact') { c.roundRect(-16, -11, 32, 22, 4); c.moveTo(-16, -9); c.lineTo(0, 3); c.lineTo(16, -9); }
     c.stroke(); c.restore();
   }
@@ -316,7 +327,7 @@ export class TV {
       this.text('Press OK to open · arrows to browse · up for Apps and Settings', 48, 262, `400 10px ${BODY}`, DIM);
       // frosted dock
       this.glass(40, 286, 880, 142, 24, 'rgba(255,255,255,0.06)');
-      const n = channels.length, tw = 108, th = 61, gap = 14, x0 = 40 + (880 - (n * tw + (n - 1) * gap)) / 2, y0 = 312;
+      const n = channels.length, gap = 12, tw = Math.min(108, (848 - (n - 1) * gap) / n), th = tw * 0.565, x0 = 40 + (880 - (n * tw + (n - 1) * gap)) / 2, y0 = 312 + (61 - th) / 2;
       const tx = i => x0 + i * (tw + gap);
       const F = this.fr ||= {}; if (F.group !== 'dock') Object.assign(F, { group: 'dock', x: tx(f) });
       F.x += (tx(f) - F.x) * 0.3;
@@ -329,7 +340,7 @@ export class TV {
       const s = 1.14, w = tw * s, h = th * s, hx = F.x - (w - tw) / 2, hy = y0 - (h - th) / 2 - 5;
       if (inDock) { c.beginPath(); c.roundRect(hx - 6, hy - 6, w + 12, h + 12, 17); c.strokeStyle = 'rgba(255,255,255,0.10)'; c.lineWidth = 6; c.stroke(); c.beginPath(); c.roundRect(hx, hy, w, h, 11); c.strokeStyle = 'rgba(255,255,255,0.92)'; c.lineWidth = 2; c.stroke(); }
       this.text(ch.name, hx + 6, 404, `600 8.5px ${BODY}`, INK);
-      this.footer([['OK', 'Open'], ['1-7', 'Jump to app'], ['BACK', 'Home']]);
+      this.footer([['OK', 'Open'], ['1-8', 'Jump to app'], ['BACK', 'Home']]);
     });
   }
   draw_settings() {
@@ -505,6 +516,31 @@ export class TV {
       const y = 280 + i * 124;
       this.text(l.name, 1082, y, `700 44px ${HEAD}`, INK);
       this.text(l.level, 1082, y + 36, `400 22px ${BODY}`, DIM);
+    });
+  }
+
+  draw_music() {
+    this.dp(c => {
+      this.tabs(); const np = audio.nowPlaying(), f = this.focus.music, fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+      this.track('MUSIC', 48, 47, `500 7.5px ${BODY}`, DIM, 0.3);
+      this.track(np ? np.title : 'Nothing playing', 46, 150, `600 40px ${HEAD}`, INK, -0.03);
+      this.text(np ? np.by : 'Add songs to public/audio/music and list them in data.js', 48, 174, `400 11px ${BODY}`, DIM);
+      if (np) {
+        this.rr(48, 196, 420, 4, 2, 'rgba(255,255,255,0.14)'); this.rr(48, 196, 420 * (np.duration ? np.time / np.duration : 0), 4, 2, INK);
+        this.text(fmt(np.time), 48, 216, `400 8.5px ${BODY}`, FAINT); this.text(np.duration ? fmt(np.duration) : '', 468, 216, `400 8.5px ${BODY}`, FAINT, 'right');
+        this.text(np.paused ? 'Paused' : 'Playing at 20% volume · shuffles when a song ends', 48, 240, `400 9px ${BODY}`, FAINT);
+        // little equaliser
+        for (let i = 0; i < 18; i++) { const h = np.paused ? 3 : 4 + Math.abs(Math.sin(this.now * (2.2 + i * 0.37) + i)) * 26; this.rr(48 + i * 9, 300 - h, 5, h, 2, this.accent); }
+      }
+      this.glass(520, 120, 392, 44 * music.length + 20, 18);
+      music.forEach((m, i) => {
+        const y = 130 + i * 44, on = i === f, live = np && np.index === i;
+        if (on) this.rr(530, y, 372, 38, 12, INK);
+        this.text(live ? (np.paused ? '❙❙' : '▶') : String(i + 1), 548, y + 23, `500 10px ${BODY}`, on ? ONINK : live ? this.accent : FAINT);
+        this.wrap(m.title, 572, y + 17, 310, 12, `600 10.5px ${BODY}`, on ? ONINK : INK, 1);
+        this.wrap(m.by, 572, y + 30, 310, 11, `400 8px ${BODY}`, on ? 'rgba(10,10,10,0.6)' : FAINT, 1);
+      });
+      this.footer([['OK', 'Play this'], ['◀ ▶', 'Previous / next'], ['▶❙❙', 'Pause'], ['BACK', 'Home']]);
     });
   }
 

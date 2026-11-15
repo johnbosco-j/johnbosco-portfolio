@@ -87,7 +87,7 @@ function setMood(name) {
     for (const key in mood.n) mood.n[key] = a.n[key] + (M[key] - a.n[key]) * k;
     applyMood();
   });
-  document.querySelectorAll('#dock [data-mood]').forEach(b => b.classList.toggle('on', b.dataset.mood === name));
+  document.querySelectorAll('#lights [data-mood]').forEach(b => b.classList.toggle('on', b.dataset.mood === name));
   audio.click(); guide().play('think', 1.6); say(M.say, { auto: true, hold: 2.5, id: 'mood-' + name });
 }
 applyMood();
@@ -316,6 +316,8 @@ function freeWalk(dt) {
     if (blocked(player.pos, dir, R + len, H)) return false;
     for (const a of [0.7, -0.7]) { const d2 = V(dir.x * Math.cos(a) - dir.z * Math.sin(a), 0, dir.x * Math.sin(a) + dir.z * Math.cos(a)); if (blocked(player.pos, d2, R * 0.8, [1.1])) return false; }
     const nx = player.pos.x + mx, nz = player.pos.z + mz, gy = drop(nx, nz, player.pos.y + 0.62, 1.7);
+    // the car is solid too
+    if (house && player.pos.y < 1) { const cp = house.car.rig.position, R2 = 0.62, d1 = Math.hypot(nx - cp.x, nz - cp.z); if (d1 < R2 && d1 < Math.hypot(player.pos.x - cp.x, player.pos.z - cp.z)) return false; }
     if (gy === null || gy - player.pos.y > 0.27) return false;
     player.pos.x = nx; player.pos.z = nz; player.groundY = gy; stepBob(len, speed); return true;
   };
@@ -351,6 +353,7 @@ function press(name, action) {
   const m = remoteParts[name]; if (m) m.userData.pressed = state.t;
   if (action === 'power') { if (state.phase === 'power' || state.phase === 'free') tv.power(); return; }
   if (action === 'mute') { toggleSound(); return; }
+  if (action === 'hint' && tv.isOn && tv.screen === 'music') { audio.click(); tv.lastInput = tv.now; tv.input('play'); return; }
   if (action === 'hint') { audio.click(); const id = tv.isOn ? tv.screen : null; if (id && remarks[id]) say(remarks[id][0], { auto: true, id: 'tv-' + id }); return; }
   if (action === 'lean+' || action === 'lean-') { audio.click(); state.zoom = clamp((state.zoom || 0) + (action === 'lean+' ? -5 : 5), -10, 14); return; }
   if (!tv.isOn) return;
@@ -428,7 +431,7 @@ function onScreen(id) {
   if (remarked.has(id) || !remarks[id]) return;
   remarked.add(id);
   const [line, g] = remarks[id]; active.play(g, 2.4); say(line, { auto: true, id: 'tv-' + id });
-  if (!state.toured && channels.every(c => remarked.has(c.id))) {
+  if (!state.toured && channels.filter(c => remarks[c.id]).every(c => remarked.has(c.id))) {
     state.toured = true;
     setTimeout(() => { active.play('tip', 2.6); say('That\'s every channel, partner. The rest of the house is yours to explore.', { auto: true, hold: 5, id: 'tv-done' }); }, 9000);
   }
@@ -478,7 +481,7 @@ let followAcc = 0;
 function updateGuides(dt) {
   followAcc += dt;
   const inCar = house && (house.car.driving || player.mode === 'car') && !active.asleep;
-  if (inCar && !active.hop) { if (active.root.position.distanceTo(house.car.seat('driver')) > 0.5 && !state.guideBoarded) { state.guideBoarded = true; active.hopTo(house.car.seat('driver'), { height: 0.7, duration: 0.7 }).then(() => { state.guideSeated = true; }); } else if (state.guideSeated) { house.car.seat('driver', active.root.position); active.targetYaw = 0; } }
+  if (inCar && !active.hop) { if (active.root.position.distanceTo(house.car.seat('driver')) > 0.5 && !state.guideBoarded) { state.guideBoarded = true; active.hopTo(house.car.seat('driver'), { height: 0.7, duration: 0.7 }).then(() => { state.guideSeated = true; }); } else if (state.guideSeated) { house.car.seat('driver', active.root.position); active.targetYaw = house.car.heading; } }
   if (!inCar) state.guideBoarded = state.guideSeated = false;
   if (followAcc > 0.3 && state.phase === 'free' && !active.hop && !active.asleep && !inCar) {
     followAcc = 0; const tgt = guideTarget(active), d = active.root.position.distanceTo(tgt);
@@ -580,26 +583,26 @@ function pianoKey(k) {
 const fob = document.createElement('div'); fob.id = 'fob'; fob.hidden = true; document.body.appendChild(fob);
 function drawFob() {
   const c = house.car, riding = player.mode === 'car';
-  fob.innerHTML = `<b>Ertiga</b><span>${riding ? (c.driving ? 'Riding. Your guide has the wheel.' : 'You are in the passenger seat.') : c.driving ? 'Out for a spin.' : 'Parked on the patio.'}</span>
-    <div><button data-a="lights">${c.on ? 'Lights off' : 'Lights on'}</button><button data-a="door" class="main">${riding ? 'Get out' : 'Get in'}</button><button data-a="drive">${c.driving ? 'Stop' : 'Drive'}</button></div>`;
-  fob.querySelectorAll('button').forEach(b => b.onclick = () => { const a = b.dataset.a; if (a === 'lights') c.lights(!c.on); if (a === 'door') riding ? exitCar() : enterCar(); if (a === 'drive') { if (c.driving) c.stop(); else { c.start(); active.play('cheer', 1.2); if (!state.droveOnce) { state.droveOnce = true; say('Buckle up. It\'s a short road, but I drive it with style.', { auto: true, hold: 3, id: 'car-go' }); } } } drawFob(); });
+  fob.innerHTML = `<b>Ertiga</b><span>${riding ? (c.driving ? 'Riding along. Your guide has the wheel.' : 'Riding along. Parked.') : c.driving ? 'Out doing laps.' : 'Parked on the patio.'}</span>
+    <div><button data-a="lights">${c.on ? 'Lights off' : 'Lights on'}</button><button data-a="door" class="main">${riding ? 'Hop off' : 'Ride along'}</button><button data-a="drive">${c.driving ? 'Stop' : 'Drive'}</button></div>`;
+  fob.querySelectorAll('button').forEach(b => b.onclick = () => { const a = b.dataset.a; if (a === 'lights') c.lights(!c.on); if (a === 'door') riding ? exitCar() : enterCar(); if (a === 'drive') { if (c.driving) c.stop(); else { c.start(); active.play('cheer', 1.2); if (!state.droveOnce) { state.droveOnce = true; say('Yee-haw! Stand clear, partner. I drive this thing with style.', { auto: true, hold: 3, id: 'car-go' }); } } } drawFob(); });
 }
 async function enterCar() {
   if (player.mode !== 'walk' || state.busy) return;
   state.busy = true; hideCard(); objective(''); audio.click();
-  const a = eyeOf(), y0 = player.yaw, p0 = player.pitch; let dy = Math.PI - y0; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+  const a = eyeOf(), y0 = player.yaw, p0 = player.pitch; let dy = house.car.heading + Math.PI - y0; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
   player.mode = 'cine'; player.view = { pos: a.clone(), yaw: y0, pitch: p0 };
-  await tween(1.2, k => { player.view.pos.lerpVectors(a, house.car.seat('passenger'), k); player.view.pos.y -= Math.sin(k * Math.PI) * 0.12; player.view.yaw = y0 + dy * k; player.view.pitch = p0 * (1 - k); });
+  await tween(1.0, k => { player.view.pos.lerpVectors(a, house.car.seat('passenger'), k); player.view.yaw = y0 + dy * k; player.view.pitch = p0 + (-0.3 - p0) * k; });
   if (audio.ok()) audio.burst({ dur: 0.12, type: 'lowpass', freq: 300, vol: 0.3 });
-  player.mode = 'car'; player.view = null; player.yaw = Math.PI; player.pitch = 0; state.busy = false; drawFob();
-  $('help').textContent = 'Drag to look around · use the key fob to drive, stop or get out';
+  player.mode = 'car'; player.view = null; player.yaw = 0; player.pitch = 0; state.busy = false; drawFob();
+  $('help').textContent = 'Drag to look around · use the key fob to drive, stop or hop off';
 }
 async function exitCar() {
   if (player.mode !== 'car' || state.busy) return;
   state.busy = true; house.car.stop(); if (audio.ok()) audio.burst({ dur: 0.12, type: 'lowpass', freq: 300, vol: 0.3 });
-  const st = house.stations.patio.stand[0], a = house.car.seat('passenger'), b = V(st.x, st.y + EYE, st.z), y0 = player.yaw, p0 = player.pitch;
-  player.mode = 'cine'; player.view = { pos: a.clone(), yaw: y0, pitch: p0 };
-  await tween(1.3, k => { player.view.pos.lerpVectors(a, b, k); player.view.yaw = y0 + (0 - y0) * k; player.view.pitch = p0 * (1 - k); });
+  const st = house.stations.patio.stand[0], a = house.car.seat('passenger'), b = V(st.x, st.y + EYE, st.z), y0 = house.car.heading + Math.PI + player.yaw; let dy = 0 - y0; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+  player.mode = 'cine'; player.view = { pos: a.clone(), yaw: y0, pitch: -0.3 };
+  await tween(1.1, k => { player.view.pos.lerpVectors(a, b, k); player.view.yaw = y0 + dy * k; player.view.pitch = -0.3 * (1 - k); });
   player.pos.copy(st); player.yaw = 0; player.pitch = 0; player.view = null; player.mode = 'walk'; state.busy = false; drawFob(); $('help').textContent = HELP_WALK;
 }
 
@@ -642,12 +645,10 @@ const ICON = {
 };
 const svg = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
 function revealDock() {
-  const dock = $('dock'); if (!dock.hidden) return;
-  dock.innerHTML = `<span class="cap">Shortcuts</span><div class="grp" role="group" aria-label="Go to">${Object.keys(house.stations).map(id => `<button data-station="${id}" title="${house.stations[id].name}">${svg(id)}<span>${house.stations[id].name}</span></button>`).join('')}</div><i></i>
-    <div class="grp lights" role="group" aria-label="Lighting">${Object.keys(MOODS).map(m => `<button data-mood="${m}" class="${m === mood.name ? 'on' : ''}" title="${m[0].toUpperCase() + m.slice(1)} light" aria-label="${m} light">${svg(m)}</button>`).join('')}</div>`;
-  dock.querySelectorAll('[data-station]').forEach(b => b.onclick = () => goStation(b.dataset.station));
-  dock.querySelectorAll('[data-mood]').forEach(b => b.onclick = () => setMood(b.dataset.mood));
-  dock.hidden = false; document.body.classList.add('has-dock');
+  const el = $('lights'); if (!el.hidden) return;
+  el.innerHTML = Object.keys(MOODS).map(m => `<button data-mood="${m}" class="${m === mood.name ? 'on' : ''}" title="${m[0].toUpperCase() + m.slice(1)} light" aria-label="${m} light">${svg(m)}</button>`).join('');
+  el.querySelectorAll('[data-mood]').forEach(b => b.onclick = () => setMood(b.dataset.mood));
+  el.hidden = false;
 }
 // shortcut: a quick blink and you are standing at that spot (walking there works too)
 async function goStation(id) {
@@ -656,7 +657,7 @@ async function goStation(id) {
   state.busy = true; hideCard(); audio.select(); const fade = $('fade'); fade.classList.add('on'); await wait(0.28);
   if (player.mode === 'sit') putRemoteBack();
   const [pos, yaw] = house.stations[id].stand; player.pos.copy(pos); const gy = drop(pos.x, pos.z, pos.y + 0.7, 1.5); if (gy !== null) player.pos.y = gy;
-  player.yaw = yaw; player.pitch = id === 'studio' || id === 'keys' ? -0.5 : 0; player.mode = 'walk'; player.view = null; player.lap = null; house.car.stop();
+  player.yaw = yaw; player.pitch = id === 'studio' || id === 'keys' ? -0.5 : 0; player.mode = 'walk'; player.view = null; player.lap = null;
   $('help').textContent = HELP_WALK;
   active.hop = null; if (!active.asleep) active.root.position.copy(house.stations[id].guide);
   fade.classList.remove('on'); state.busy = false;
@@ -691,7 +692,7 @@ canvas.addEventListener('pointermove', e => {
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
     if (drag.moved > 6 && ['walk', 'sit', 'car'].includes(player.mode) && !state.busy && state.phase !== 'intro') {
       player.yaw += dx * 0.0034; player.pitch = clamp(player.pitch + dy * 0.0028, -1.1, 1.0);
-      if (player.mode !== 'walk') player.yaw = clamp(player.yaw, Math.PI - (player.mode === 'car' ? 2 : 1.2), Math.PI + (player.mode === 'car' ? 2 : 1.2));
+      if (player.mode === 'sit') player.yaw = clamp(player.yaw, Math.PI - 1.2, Math.PI + 1.2); if (player.mode === 'car') player.yaw = clamp(player.yaw, -2.4, 2.4);
       canvas.style.cursor = 'grabbing'; $('tip').hidden = true; return;
     }
   }
@@ -718,6 +719,7 @@ canvas.addEventListener('pointerup', e => {
   }
 });
 $('dialog').addEventListener('click', advance);
+// the space bar pauses the music when the Music app is open
 const TVKEYS = { arrowleft: ['ring', 'left'], arrowright: ['ring', 'right'], arrowup: ['ring', 'up'], arrowdown: ['ring', 'down'], enter: ['ok', 'ok'], ' ': ['ok', 'ok'], escape: ['back', 'back'], backspace: ['back', 'back'], h: ['home', 'home'], p: ['power', 'power'], m: ['mute', 'mute'] };
 addEventListener('keydown', e => {
   if (state.phase === 'boot' || !$('plain').hidden || e.metaKey || e.ctrlKey) return;
@@ -730,7 +732,7 @@ addEventListener('keydown', e => {
   if (player.mode === 'sit' && !state.busy) {
     if (state.phase === 'free' && 'wasd'.includes(k) && k.length === 1) { standUp(); return; }
     if (TVKEYS[k]) { e.preventDefault(); if (state.hasRemote) press(...TVKEYS[k]); return; }
-    if (/^[1-7]$/.test(k) && tv.isOn && tv.screen !== 'boot') { audio.select(); state.keyAt = state.t; tv.lastInput = tv.now; tv.go(channels[+k - 1].id); }
+    if (/^[1-8]$/.test(k) && tv.isOn && tv.screen !== 'boot') { audio.select(); state.keyAt = state.t; tv.lastInput = tv.now; tv.go(channels[+k - 1].id); }
     return;
   }
   if (player.mode !== 'walk' || state.phase !== 'free') return;
@@ -775,7 +777,7 @@ function tick(dt) {
   ptr.sx += (ptr.x - ptr.sx) * Math.min(1, dt * 4); ptr.sy += (ptr.y - ptr.sy) * Math.min(1, dt * 4);
   let fov = 58;
   if (player.lap) { camera.position.copy(player.lap.pos); camera.quaternion.copy(player.lap.quat); fov = player.mode === 'piano' ? 60 : 46; }
-  else if (player.mode === 'car') { house.car.seat('passenger', camera.position); camera.rotation.set(player.pitch - ptr.sy * 0.02, player.yaw - ptr.sx * 0.03, 0); fov = 66; }
+  else if (player.mode === 'car') { house.car.seat('passenger', camera.position); camera.rotation.set(-0.3 + player.pitch - ptr.sy * 0.02, house.car.heading + Math.PI + player.yaw - ptr.sx * 0.03, 0); fov = 64; }
   else {
     const sit = player.mode === 'sit', v = player.view, par = sit ? 0.035 : 0.05;
     const moving = player.vel > 0.2 ? 1 : 0; player.bob += ((moving) - player.bob) * Math.min(1, dt * 8);
@@ -797,6 +799,8 @@ function tick(dt) {
       else if (state.freeT > state.henAt && !house.hen.pester && player.pos.y < 1 && ['walk', 'sit'].includes(player.mode)) { state.henAt = state.freeT + 50 + Math.random() * 60; house.hen.pester = { phase: 'run', t: 0 }; }
     }
     updateStation(); house.update(dt, t); updateHen(dt, t);
+    // the car waits, and honks, rather than run anyone over
+    { const n = house.car.nose(), inWay = player.mode === 'walk' && player.pos.y < 1 && Math.hypot(n.x - player.pos.x, n.z - player.pos.z) < 0.95; house.car.update(dt, t, inWay); if (inWay && house.car.driving && !state.carWarned) { state.carWarned = true; say('Whoa there! Mind the road, partner. I\'ll wait.', { auto: true, hold: 2, id: 'car-wait' }); } }
   }
   updateGuides(dt);
 
