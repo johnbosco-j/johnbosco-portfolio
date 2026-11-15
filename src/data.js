@@ -198,7 +198,7 @@ export const sites = [
 // Who is guiding. Change the display names here.
 export const guides = { sheriff: { name: 'Sheriff' }, ranger: { name: 'Buzz' } };
 
-// Background music: shuffled, 5% volume (set in audio.js, music.vol), changeable from the TV's Music app.
+// Background music: shuffled, 2.5% volume (set in audio.js, music.vol), changeable from the TV's Music app.
 // Files live in public/audio/music/. Only list tracks you have the right to publish.
 export const music = [
   { file: 'track1.mp3', title: 'Ebenesare', by: 'Flute cover' },
