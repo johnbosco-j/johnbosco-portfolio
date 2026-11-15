@@ -83,8 +83,8 @@ export function createHouse({ scene, showCard, guide, say, tween, models, drop, 
     const hello = { Tamil: 'Vanakkam', Malayalam: 'Namaskaram', English: 'Hello', Kannada: 'Namaskara' };
     languages.forEach((l, i) => {
       const m = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.012, 28), [std(0x22262d), new THREE.MeshStandardMaterial({ map: label(l.name, 128, 128, 26, '#fff', ['#b4451f', '#1f6f5b', '#27408b', '#7a3e9d'][i]), roughness: 0.4 }), std(0x22262d)]);
-      m.rotation.x = Math.PI / 2; m.position.set(0.13 + i * 0.125, 1.95, Z + 0.004); scene.add(m);
-      add(m, `Say hello in ${l.name}`, () => { tween(0.4, k => { m.rotation.y = k * Math.PI * 2; }); audio.select(); guide().play('wave', 1.4); say(`${hello[l.name]}! That's hello in ${l.name}. He speaks it at ${l.level.toLowerCase()} level.`, { auto: true, hold: 3 }); });
+      m.rotation.x = Math.PI / 2; m.rotation.y = Math.PI / 2; m.position.set(0.13 + i * 0.125, 1.95, Z + 0.004); scene.add(m);
+      add(m, `Say hello in ${l.name}`, () => { tween(0.4, k => { m.rotation.y = Math.PI / 2 + k * Math.PI * 2; }); audio.select(); guide().play('wave', 1.4); say(`${hello[l.name]}! That's hello in ${l.name}. He speaks it at ${l.level.toLowerCase()} level.`, { auto: true, hold: 3 }); });
     });
   }
 
